@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { BlogList } from '@/components/BlogList'
 import { Pagination } from '@/components/Pagination'
 import { Hero } from '@/components/Hero'
@@ -66,6 +66,16 @@ const POSTS_PER_PAGE = 6;
 
 export default function Home() {
   const [currentPage, setCurrentPage] = useState(1);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    // Simulate loading delay
+    const timer = setTimeout(() => {
+      setIsLoading(false);
+    }, 2000);
+
+    return () => clearTimeout(timer);
+  }, []);
 
   const indexOfLastPost = currentPage * POSTS_PER_PAGE;
   const indexOfFirstPost = indexOfLastPost - POSTS_PER_PAGE;
@@ -75,6 +85,11 @@ export default function Home() {
 
   const handlePageChange = (pageNumber: number) => {
     setCurrentPage(pageNumber);
+    setIsLoading(true);
+    // Simulate loading delay when changing pages
+    setTimeout(() => {
+      setIsLoading(false);
+    }, 1000);
   };
 
   return (
@@ -87,11 +102,11 @@ export default function Home() {
           </h2>
           <div className="flex justify-center items-center gap-2">
             <div className="h-1 w-12 bg-primary rounded"></div>
-            <span className="text-sm font-medium text-muted-foreground">Explora el contenido más reciente</span>
+            <span className="text-sm font-medium text-muted-foreground">Explora nuestro contenido más reciente</span>
             <div className="h-1 w-12 bg-primary rounded"></div>
           </div>
         </div>
-        <BlogList posts={currentPosts} />
+        <BlogList posts={currentPosts} isLoading={isLoading} />
         <Pagination
           currentPage={currentPage}
           totalPages={totalPages}

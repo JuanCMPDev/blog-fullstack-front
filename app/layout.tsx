@@ -6,8 +6,8 @@ import { ThemeProvider } from '@/components/theme-provider'
 const inter = Inter({ subsets: ['latin'] })
 
 export const metadata: Metadata = {
-  title: 'Mi Blog Dev',
-  description: 'Un blog para compartir mi progreso en la universidad',
+  title: 'JCDevBlog',
+  description: 'Un blog para compartir conocimientos de desarrollo',
 }
 
 export default function RootLayout({
@@ -19,12 +19,9 @@ export default function RootLayout({
     <html lang="es" suppressHydrationWarning>
       <body className={inter.className}>
         <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
-          <div className="min-h-screen bg-background text-foreground">
-            {children}
-          </div>
+          {children}
         </ThemeProvider>
       </body>
     </html>
   )
 }
-

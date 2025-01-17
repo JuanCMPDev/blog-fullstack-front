@@ -1,6 +1,7 @@
 import { Sheet, SheetContent, SheetTrigger, SheetTitle } from "@/components/ui/sheet"
 import { Button } from "@/components/ui/button"
-import { Menu } from 'lucide-react'
+import { Input } from "@/components/ui/input"
+import { Menu, Search } from 'lucide-react'
 import Link from "next/link"
 import { UserAvatar } from "./UserAvatar"
 import { VisuallyHidden } from "@/components/ui/visually-hidden"
@@ -24,6 +25,14 @@ export function MobileMenu({ theme, setTheme, user }: MobileMenuProps) {
           <SheetTitle>Menu</SheetTitle>
         </VisuallyHidden>
         <nav className="flex flex-col gap-4">
+          <div className="relative mb-4">
+            <Input
+              type="search"
+              placeholder="Buscar..."
+              className="w-full pl-8"
+            />
+            <Search className="absolute left-2 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          </div>
           <Link href="/" className="text-lg font-semibold hover:text-primary">
             Inicio
           </Link>

@@ -2,7 +2,8 @@
 
 import { useTheme } from 'next-themes'
 import { Button } from '@/components/ui/button'
-import { Moon, Sun } from 'lucide-react'
+import { Input } from '@/components/ui/input'
+import { Moon, Sun, Search, Code } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { MobileMenu } from './MobileMenu'
@@ -37,24 +38,38 @@ export function Header() {
       }`}>
       <div className="container mx-auto px-4">
         <div className="flex items-center justify-between h-16">
-          <Link href="/" className="text-2xl font-bold">
-            Mi Blog Dev
+          <Link href="/" className="flex items-center space-x-2">
+            <Code className="h-6 w-6 text-primary" />
+            <span className="text-2xl font-bold text-foreground">
+              JCDev<span className="text-primary">Blog</span>
+            </span>
           </Link>
 
-          <div className="hidden md:flex items-center space-x-4">
+          <div className="hidden md:flex items-center space-x-6 flex-1 justify-center">
             <nav>
-              <ul className="flex space-x-4">
+              <ul className="flex space-x-6">
                 <li><Link href="/" className="hover:text-primary transition-colors">Inicio</Link></li>
-                <li><Link href="/ejercicios" className="hover:text-primary transition-colors">Ejercicios</Link></li>
+                <li><Link href="/exercises" className="hover:text-primary transition-colors">Ejercicios</Link></li>
                 <li><Link href="/contact" className="hover:text-primary transition-colors">Contacto</Link></li>
               </ul>
             </nav>
+          </div>
+
+          <div className="flex items-center space-x-4">
+            <div className="relative hidden md:block">
+              <Input
+                type="search"
+                placeholder="Buscar..."
+                className="w-[200px] pl-8"
+              />
+              <Search className="absolute left-2 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            </div>
 
             <Button
               variant="ghost"
               size="icon"
               onClick={() => setTheme(theme === 'light' ? 'dark' : 'light')}
-              className="hover:bg-accent hover:text-accent-foreground"
+              className="hidden md:inline-flex"
             >
               {theme === 'light' ? <Moon className="h-5 w-5" /> : <Sun className="h-5 w-5" />}
             </Button>
@@ -62,7 +77,7 @@ export function Header() {
             {user ? (
               <UserMenu user={user} />
             ) : (
-              <Button variant="outline">Iniciar sesión</Button>
+              <Button variant="outline" className="hidden md:inline-flex">Iniciar sesión</Button>
             )}
           </div>
 
