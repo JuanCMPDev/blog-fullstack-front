@@ -38,8 +38,9 @@ export function Hero() {
               />
             </div>
             <div className="absolute -bottom-4 -left-4 bg-primary text-primary-foreground p-4 rounded-lg shadow-lg">
-              <p className="font-semibold">+1000 Estudiantes</p>
-              <p className="text-sm">han mejorado sus habilidades</p>
+              <p className="font-semibold">Ingenio, innovación
+              </p>
+              <p className="text-sm">y compromiso en cada proyecto.</p>
             </div>
           </div>
         </div>

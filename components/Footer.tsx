@@ -16,7 +16,7 @@ export function Footer() {
             <h4 className="text-sm font-semibold mb-3">Enlaces Rápidos</h4>
             <ul className="space-y-2">
               <li><Link href="/" className="text-sm hover:text-primary transition-colors">Inicio</Link></li>
-              <li><Link href="/ejercicios" className="text-sm hover:text-primary transition-colors">Ejercicios</Link></li>
+              <li><Link href="/exercises" className="text-sm hover:text-primary transition-colors">Ejercicios</Link></li>
               <li><Link href="/contact" className="text-sm hover:text-primary transition-colors">Contacto</Link></li>
             </ul>
           </div>
@@ -44,7 +44,7 @@ export function Footer() {
           </div>
         </div>
         <div className="mt-8 pt-8 border-t text-center text-sm text-muted-foreground">
-          <p>&copy; {new Date().getFullYear()} Mi Blog Universitario. Todos los derechos reservados.</p>
+          <p>&copy; {new Date().getFullYear()} Mi Blog dev. Todos los derechos reservados.</p>
         </div>
       </div>
     </footer>

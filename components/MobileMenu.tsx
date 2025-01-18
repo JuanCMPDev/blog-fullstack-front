@@ -1,10 +1,9 @@
 import { Sheet, SheetContent, SheetTrigger, SheetTitle } from "@/components/ui/sheet"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Menu, Search } from 'lucide-react'
+import { Menu, Search, Sun, Moon } from 'lucide-react'
 import Link from "next/link"
 import { UserAvatar } from "./UserAvatar"
-import { VisuallyHidden } from "@/components/ui/visually-hidden"
 
 interface MobileMenuProps {
   theme: string | undefined
@@ -20,11 +19,11 @@ export function MobileMenu({ theme, setTheme, user }: MobileMenuProps) {
           <Menu className="h-5 w-5" />
         </Button>
       </SheetTrigger>
-      <SheetContent side="right" className="w-[300px] sm:w-[400px]">
-        <VisuallyHidden>
-          <SheetTitle>Menu</SheetTitle>
-        </VisuallyHidden>
-        <nav className="flex flex-col gap-4">
+      <SheetContent side="right" className="w-[80%] sm:w-[350px] max-w-sm">
+        <div className="flex flex-col h-full">
+          <div className="flex justify-between items-center mb-4">
+            <SheetTitle>Menu</SheetTitle>
+          </div>
           <div className="relative mb-4">
             <Input
               type="search"
@@ -33,36 +32,50 @@ export function MobileMenu({ theme, setTheme, user }: MobileMenuProps) {
             />
             <Search className="absolute left-2 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           </div>
-          <Link href="/" className="text-lg font-semibold hover:text-primary">
-            Inicio
-          </Link>
-          <Link href="/ejercicios" className="text-lg font-semibold hover:text-primary">
-            Ejercicios
-          </Link>
-          <Link href="/contact" className="text-lg font-semibold hover:text-primary">
-            Contacto
-          </Link>
-          <Button
-            variant="outline"
-            onClick={() => setTheme(theme === 'light' ? 'dark' : 'light')}
-            className="justify-start"
-          >
-            {theme === 'light' ? 'Modo oscuro' : 'Modo claro'}
-          </Button>
-          {user ? (
-            <div className="flex items-center gap-2 pt-4 border-t">
-              <UserAvatar name={user.name} image={user.image} />
-              <div>
-                <p className="font-semibold">{user.name}</p>
-                <Button variant="link" className="p-0 h-auto font-normal">
-                  Cerrar sesión
-                </Button>
+          <nav className="flex flex-col gap-4">
+            <Link href="/" className="text-lg font-semibold hover:text-primary">
+              Inicio
+            </Link>
+            <Link href="/exercises" className="text-lg font-semibold hover:text-primary">
+              Ejercicios
+            </Link>
+            <Link href="/contact" className="text-lg font-semibold hover:text-primary">
+              Contacto
+            </Link>
+          </nav>
+          <div className="mt-auto">
+            <Button
+              variant="outline"
+              onClick={() => setTheme(theme === 'light' ? 'dark' : 'light')}
+              className="w-full justify-start mb-4"
+            >
+              {theme === 'light' ? (
+                <>
+                  <Moon className="mr-2 h-4 w-4" />
+                  Modo oscuro
+                </>
+              ) : (
+                <>
+                  <Sun className="mr-2 h-4 w-4" />
+                  Modo claro
+                </>
+              )}
+            </Button>
+            {user ? (
+              <div className="flex items-center gap-2 pt-4 border-t">
+                <UserAvatar name={user.name} image={user.image} />
+                <div>
+                  <p className="font-semibold">{user.name}</p>
+                  <Button variant="link" className="p-0 h-auto font-normal">
+                    Cerrar sesión
+                  </Button>
+                </div>
               </div>
-            </div>
-          ) : (
-            <Button className="mt-4">Iniciar sesión</Button>
-          )}
-        </nav>
+            ) : (
+              <Button className="w-full">Iniciar sesión</Button>
+            )}
+          </div>
+        </div>
       </SheetContent>
     </Sheet>
   )

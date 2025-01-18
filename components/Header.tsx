@@ -34,7 +34,7 @@ export function Header() {
   }
 
   return (
-    <header className={`sticky top-0 z-50 transition-all duration-200 ${scrolled ? 'bg-background/80 backdrop-blur-sm shadow-md' : 'bg-background'
+    <header className={`sticky top-0 z-50 w-full transition-all duration-200 ${scrolled ? 'bg-background/80 backdrop-blur-sm shadow-md' : 'bg-background'
       }`}>
       <div className="container mx-auto px-4">
         <div className="flex items-center justify-between h-16">
@@ -56,7 +56,7 @@ export function Header() {
           </div>
 
           <div className="flex items-center space-x-4">
-            <div className="relative hidden md:block">
+            <div className="relative hidden lg:block"> {/* Changed from md:block to lg:block */}
               <Input
                 type="search"
                 placeholder="Buscar..."
@@ -74,10 +74,8 @@ export function Header() {
               {theme === 'light' ? <Moon className="h-5 w-5" /> : <Sun className="h-5 w-5" />}
             </Button>
 
-            {user ? (
+            {user && (
               <UserMenu user={user} />
-            ) : (
-              <Button variant="outline" className="hidden md:inline-flex">Iniciar sesión</Button>
             )}
           </div>
 
