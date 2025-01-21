@@ -55,8 +55,20 @@ export default {
   			lg: 'var(--radius)',
   			md: 'calc(var(--radius) - 2px)',
   			sm: 'calc(var(--radius) - 4px)'
-  		}
+  		},
+		  typography: {
+			DEFAULT: {
+			  css: {
+				'code::before': {
+				  content: '""'
+				},
+				'code::after': {
+				  content: '""'
+				}
+			  }
+			}
+		  }
   	}
   },
-  plugins: [require("tailwindcss-animate")],
+  plugins: [require("tailwindcss-animate"), require('@tailwindcss/typography'),],
 } satisfies Config;

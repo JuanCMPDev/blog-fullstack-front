@@ -74,6 +74,16 @@ body {
   }
 }
 
+.bg-dot-pattern {
+  background-image: radial-gradient(rgba(0, 0, 0, 0.1) 1px, transparent 1px);
+  background-size: 20px 20px;
+}
+
+.dark .bg-dot-pattern {
+  background-image: radial-gradient(rgba(255, 255, 255, 0.1) 1px, transparent 1px);
+}
+
+
 @keyframes blink {
 
   0%,
@@ -88,4 +98,68 @@ body {
 
 .animate-blink {
   animation: blink 1s step-end infinite;
+}
+
+/* Estilos para el resaltado de código */
+.prose pre {
+  margin: 0;
+  padding: 0;
+  background-color: transparent;
+}
+
+.prose pre > div {
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
+.prose code {
+  color: inherit;
+  font-weight: inherit;
+  font-size: inherit;
+  background-color: transparent;
+  padding: 0;
+  border-radius: 0;
+}
+
+@layer utilities {
+  .prose pre {
+    @apply overflow-x-auto;
+  }
+
+  .prose pre > div {
+    @apply !m-0;
+  }
+
+  .prose code {
+    @apply text-sm sm:text-base;
+  }
+  .prose {
+    @apply max-w-full;
+  }
+
+  .prose pre {
+    @apply max-w-full overflow-x-auto;
+  }
+
+  .prose img {
+    @apply max-w-full h-auto;
+  }
+
+  .prose p,
+  .prose ul,
+  .prose ol {
+    @apply text-sm sm:text-base;
+  }
+
+  .prose h2 {
+    @apply text-lg sm:text-xl md:text-2xl;
+  }
+
+  .prose h3 {
+    @apply text-base sm:text-lg md:text-xl;
+  }
+
+  .prose *:not(pre) > code {
+    @apply whitespace-normal break-words;
+  }
 }

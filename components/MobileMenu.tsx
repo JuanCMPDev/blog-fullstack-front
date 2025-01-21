@@ -1,9 +1,25 @@
-import { Sheet, SheetContent, SheetTrigger, SheetTitle } from "@/components/ui/sheet"
+"use client"
+
+import { useState } from "react"
+import Link from "next/link"
+import { Sheet, SheetContent, SheetTrigger, SheetTitle, SheetClose } from "@/components/ui/sheet"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Menu, Search, Sun, Moon } from 'lucide-react'
-import Link from "next/link"
+import { Menu, Search, Sun, Moon } from "lucide-react"
 import { UserAvatar } from "./UserAvatar"
+import { motion } from "framer-motion"
+
+interface NavItem {
+  id: string
+  label: string
+  href: string
+}
+
+const NavbarLinks: NavItem[] = [
+  { id: "home", label: "Inicio", href: "/" },
+  { id: "exercises", label: "Ejercicios", href: "/ejercicios" },
+  { id: "contact", label: "Contacto", href: "/contacto" },
+]
 
 interface MobileMenuProps {
   theme: string | undefined
@@ -12,44 +28,45 @@ interface MobileMenuProps {
 }
 
 export function MobileMenu({ theme, setTheme, user }: MobileMenuProps) {
+  const [open, setOpen] = useState(false)
+
   return (
-    <Sheet>
+    <Sheet open={open} onOpenChange={setOpen}>
       <SheetTrigger asChild>
         <Button variant="ghost" size="icon" className="md:hidden">
           <Menu className="h-5 w-5" />
         </Button>
       </SheetTrigger>
       <SheetContent side="right" className="w-[80%] sm:w-[350px] max-w-sm">
-        <div className="flex flex-col h-full">
+        <motion.div
+          className="flex flex-col h-full"
+          initial={{ opacity: 0, x: 50 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ duration: 0.3 }}
+        >
           <div className="flex justify-between items-center mb-4">
             <SheetTitle>Menu</SheetTitle>
           </div>
           <div className="relative mb-4">
-            <Input
-              type="search"
-              placeholder="Buscar..."
-              className="w-full pl-8"
-            />
+            <Input type="search" placeholder="Buscar..." className="w-full pl-8" />
             <Search className="absolute left-2 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           </div>
           <nav className="flex flex-col gap-4">
-            <Link href="/" className="text-lg font-semibold hover:text-primary">
-              Inicio
-            </Link>
-            <Link href="/exercises" className="text-lg font-semibold hover:text-primary">
-              Ejercicios
-            </Link>
-            <Link href="/contact" className="text-lg font-semibold hover:text-primary">
-              Contacto
-            </Link>
+            {NavbarLinks.map((item) => (
+              <SheetClose asChild key={item.id}>
+                <Link className="text-lg font-medium hover:text-primary transition-colors" href={item.href}>
+                  {item.label}
+                </Link>
+              </SheetClose>
+            ))}
           </nav>
           <div className="mt-auto">
             <Button
               variant="outline"
-              onClick={() => setTheme(theme === 'light' ? 'dark' : 'light')}
+              onClick={() => setTheme(theme === "light" ? "dark" : "light")}
               className="w-full justify-start mb-4"
             >
-              {theme === 'light' ? (
+              {theme === "light" ? (
                 <>
                   <Moon className="mr-2 h-4 w-4" />
                   Modo oscuro
@@ -72,10 +89,14 @@ export function MobileMenu({ theme, setTheme, user }: MobileMenuProps) {
                 </div>
               </div>
             ) : (
-              <Button className="w-full">Iniciar sesión</Button>
+              <SheetClose asChild>
+                <Button asChild className="w-full">
+                  <Link href="/signin">Iniciar sesión</Link>
+                </Button>
+              </SheetClose>
             )}
           </div>
-        </div>
+        </motion.div>
       </SheetContent>
     </Sheet>
   )

@@ -22,7 +22,7 @@ export function Hero() {
             </p>
             <div className="flex space-x-4">
               <Button asChild>
-                <Link href="/ejercicios">Explorar Ejercicios</Link>
+                <Link href="/exercises">Explorar Ejercicios</Link>
               </Button>
               <Button variant="outline" asChild>
                 <Link href="/about">Sobre Nosotros</Link>
