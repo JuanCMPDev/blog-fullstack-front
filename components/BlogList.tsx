@@ -1,21 +1,7 @@
 import React from "react"
 import { BlogPost } from "./BlogPost"
 import { Skeleton } from "@/components/ui/skeleton"
-
-interface BlogPostData {
-  id: number
-  title: string
-  excerpt: string
-  votes: number
-  comments: number
-  image: string
-  tags: string[]
-}
-
-interface BlogListProps {
-  posts: BlogPostData[]
-  isLoading: boolean
-}
+import { BlogListProps } from "@/lib/types"
 
 export function BlogList({ posts, isLoading }: BlogListProps) {
   if (isLoading) {

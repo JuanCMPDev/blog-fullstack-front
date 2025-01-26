@@ -1,9 +1,5 @@
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-
-interface UserAvatarProps {
-  name: string
-  image?: string
-}
+import { UserAvatarProps } from "@/lib/types"
 
 export function UserAvatar({ name, image }: UserAvatarProps) {
   return (

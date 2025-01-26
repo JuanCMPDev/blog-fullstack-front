@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react"
 import Image from "next/image"
-import { useParams } from "next/navigation"
+import { useParams, useRouter } from "next/navigation"
 import { motion } from "framer-motion"
 import { format } from "date-fns"
 import { es } from "date-fns/locale"
@@ -13,86 +13,19 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Skeleton } from "@/components/ui/skeleton"
 import { CodeBlock } from "@/components/CodeBlock"
 import { Comments } from "@/components/Comments"
-
-interface Post {
-  id: string
-  title: string
-  content: string
-  excerpt: string
-  author: {
-    name: string
-    avatar: string
-  }
-  publishDate: string
-  readTime: number
-  tags: string[]
-  image: string
-  likes: number
-  comments: number
-}
-
-const getPostDetails = async (id: string): Promise<Post> => {
-  await new Promise((resolve) => setTimeout(resolve, 1000))
-  return {
-    id,
-    title: "Introducción a React Hooks: Simplificando el Estado y el Ciclo de Vida",
-    content: `
-      <p>React Hooks ha revolucionado la forma en que escribimos componentes en React, permitiéndonos usar estado y otras características de React sin escribir una clase. En este artículo, exploraremos los hooks más comunes y cómo pueden simplificar nuestro código.</p>
-      
-      <h2>useState: Manejando el Estado Local</h2>
-      <p>useState es probablemente el hook más utilizado. Nos permite añadir estado local a componentes de función. Veamos un ejemplo simple:</p>
-      <pre><code class="language-jsx">
-      const [count, setCount] = useState(0);
-      
-      return (
-        &lt;div&gt;
-          &lt;p&gt;Has hecho clic {count} veces&lt;/p&gt;
-          &lt;button onClick={() =&gt; setCount(count + 1)}&gt;
-            Haz clic aquí
-          &lt;/button&gt;
-        &lt;/div&gt;
-      );
-      </code></pre>
-      
-      <h2>useEffect: Manejando Efectos Secundarios</h2>
-      <p>useEffect nos permite realizar efectos secundarios en componentes funcionales. Es como componentDidMount, componentDidUpdate, y componentWillUnmount combinados.</p>
-      <pre><code class="language-jsx">
-      useEffect(() => {
-        document.title = \`Has hecho clic \${count} veces\`;
-      }, [count]); // Solo se re-ejecuta si count cambia
-      </code></pre>
-      
-      <h2>useContext: Consumiendo el Contexto</h2>
-      <p>useContext hace que sea fácil consumir el contexto en componentes funcionales sin necesidad de componentes consumidores anidados.</p>
-      
-      <h2>Conclusión</h2>
-      <p>Los Hooks de React proporcionan una forma más directa de utilizar las características de React. Simplifican nuestros componentes y hacen que el código sea más fácil de entender y mantener.</p>
-    `,
-    excerpt:
-      "Descubre cómo React Hooks puede simplificar tu código y mejorar la gestión del estado en tus componentes de React.",
-    author: {
-      name: "María González",
-      avatar: "/placeholder.svg?height=40&width=40",
-    },
-    publishDate: "2023-07-15T10:00:00Z",
-    readTime: 8,
-    tags: ["React", "JavaScript", "Hooks", "Frontend"],
-    image: "/placeholder-post-image.jpeg",
-    likes: 127,
-    comments: 23,
-  }
-}
+import { mockPosts } from "@/lib/mock-posts"
+import type { Post } from "@/lib/types"
 
 const mockComments = [
   {
     id: "1",
-    author: { name: "Juan Pérez", avatar: "/placeholder.svg?height=40&width=40" },
-    content: "¡Excelente artículo! Me ha ayudado mucho a entender los Hooks.",
+    author: { id: "user1", name: "Juan Pérez", avatar: "/placeholder.svg?height=40&width=40" },
+    content: "¡Excelente artículo! Me ha ayudado mucho a entender los conceptos.",
     likes: 5,
     replies: [
       {
         id: "1-1",
-        author: { name: "María González", avatar: "/placeholder.svg?height=40&width=40" },
+        author: { id: "user2", name: "María González", avatar: "/placeholder.svg?height=40&width=40" },
         content: "¡Gracias Juan! Me alegro de que te haya sido útil.",
         likes: 2,
         replies: [],
@@ -103,8 +36,8 @@ const mockComments = [
   },
   {
     id: "2",
-    author: { name: "Ana Rodríguez", avatar: "/placeholder.svg?height=40&width=40" },
-    content: "¿Podrías hacer un artículo sobre useCallback y useMemo?",
+    author: { id: "user3", name: "Ana Rodríguez", avatar: "/placeholder.svg?height=40&width=40" },
+    content: "¿Podrías hacer un artículo sobre temas más avanzados en este campo?",
     likes: 3,
     replies: [],
     createdAt: "2023-07-17T10:00:00Z",
@@ -115,15 +48,22 @@ export default function PostPage() {
   const { id } = useParams()
   const [post, setPost] = useState<Post | null>(null)
   const [isLoading, setIsLoading] = useState(true)
+  const router = useRouter()
 
   useEffect(() => {
-    if (typeof id === "string") {
-      getPostDetails(id).then((postData) => {
-        setPost(postData)
-        setIsLoading(false)
-      })
+    const fetchPost = () => {
+      setIsLoading(true)
+      const foundPost = mockPosts.find((p) => p.id === Number(id))
+      if (foundPost) {
+        setPost(foundPost)
+      } else {
+        router.push("/404")
+      }
+      setIsLoading(false)
     }
-  }, [id])
+
+    fetchPost()
+  }, [id, router])
 
   const renderContent = (content: string) => {
     const parser = new DOMParser()
@@ -143,7 +83,7 @@ export default function PostPage() {
 
   if (isLoading) {
     return (
-      <div>
+      <div className="container mx-auto px-4 py-8">
         <Skeleton className="w-full aspect-video mb-8 rounded-lg" />
         <Skeleton className="w-3/4 h-8 mb-4" />
         <Skeleton className="w-1/2 h-6 mb-8" />
@@ -156,13 +96,18 @@ export default function PostPage() {
     )
   }
 
-  if (!post) return <div>Post no encontrado</div>
+  if (!post) return null
 
   return (
-    <motion.article initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}>
+    <motion.article
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.5 }}
+      className="container mx-auto px-4 py-8"
+    >
       <div className="relative w-full aspect-video mb-8">
         <Image
-          src={post.image || "/placeholder.svg"}
+          src={post.coverImage || "/placeholder.svg"}
           alt={post.title}
           fill
           className="object-cover rounded-lg shadow-lg"

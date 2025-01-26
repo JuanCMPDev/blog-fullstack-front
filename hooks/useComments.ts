@@ -1,18 +1,7 @@
+import type { Comment, UseCommentsReturn } from "@/lib/types"
 import { useState, useCallback } from "react"
 
-interface Comment {
-  id: string
-  author: {
-    name: string
-    avatar: string
-  }
-  content: string
-  likes: number
-  replies: Comment[]
-  createdAt: string
-}
-
-export const useComments = (initialComments: Comment[]) => {
+export const useComments = (initialComments: Comment[]): UseCommentsReturn => {
   const [comments, setComments] = useState<Comment[]>(initialComments)
   const [replyingTo, setReplyingTo] = useState<string | null>(null)
   const [replyContent, setReplyContent] = useState("")
@@ -39,7 +28,7 @@ export const useComments = (initialComments: Comment[]) => {
     if (replyingTo && replyContent.trim()) {
       const newReply: Comment = {
         id: Date.now().toString(),
-        author: { name: "Usuario Actual", avatar: "/placeholder.svg?height=40&width=40" },
+        author: { id: "current-user-id", name: "Usuario Actual", avatar: "/placeholder.svg?height=40&width=40" },
         content: replyContent.trim(),
         likes: 0,
         replies: [],
@@ -62,11 +51,11 @@ export const useComments = (initialComments: Comment[]) => {
     }
   }, [replyingTo, replyContent])
 
-  const addNewComment = useCallback((newCommentContent: string) => {
+  const addNewComment = useCallback((newCommentContent: string, authorId: string) => {
     if (newCommentContent.trim()) {
       const comment: Comment = {
         id: Date.now().toString(),
-        author: { name: "Usuario Actual", avatar: "/placeholder.svg?height=40&width=40" },
+        author: { id: authorId, name: "Usuario Actual", avatar: "/placeholder.svg?height=40&width=40" },
         content: newCommentContent.trim(),
         likes: 0,
         replies: [],
@@ -74,6 +63,18 @@ export const useComments = (initialComments: Comment[]) => {
       }
       setComments((prevComments) => [comment, ...prevComments])
     }
+  }, [])
+
+  const deleteComment = useCallback((commentId: string) => {
+    const filterComments = (comments: Comment[]): Comment[] =>
+      comments.filter((comment) => {
+        if (comment.id === commentId) {
+          return false
+        }
+        comment.replies = filterComments(comment.replies)
+        return true
+      })
+    setComments((prevComments) => filterComments(prevComments))
   }, [])
 
   return {
@@ -86,6 +87,8 @@ export const useComments = (initialComments: Comment[]) => {
     setReplyContent,
     addNewComment,
     cancelReply: () => setReplyingTo(null),
+    deleteComment,
   }
 }
 
+  

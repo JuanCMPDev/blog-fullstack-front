@@ -4,18 +4,9 @@ import { Badge } from "@/components/ui/badge"
 import { ThumbsUp, MessageSquare, ArrowRight } from "lucide-react"
 import Image from "next/image"
 import Link from "next/link"
+import { BasePost } from "@/lib/types"
 
-interface BlogPostProps {
-  id: number
-  title: string
-  excerpt: string
-  votes: number
-  comments: number
-  image: string
-  tags: string[]
-}
-
-export function BlogPost({ id, title, excerpt, votes, comments, image, tags }: BlogPostProps) {
+export function BlogPost({ id, title, excerpt, likes, comments, image, tags }: BasePost ) {
   return (
     <Card className="flex flex-col h-full overflow-hidden transition-shadow hover:shadow-lg">
       <div className="relative w-full pt-[56.25%]">
@@ -44,7 +35,7 @@ export function BlogPost({ id, title, excerpt, votes, comments, image, tags }: B
         <div className="flex space-x-4 text-sm text-muted-foreground">
           <span className="flex items-center">
             <ThumbsUp className="mr-1 h-4 w-4" />
-            {votes}
+            {likes}
           </span>
           <span className="flex items-center">
             <MessageSquare className="mr-1 h-4 w-4" />

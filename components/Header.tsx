@@ -6,24 +6,20 @@ import { Input } from "@/components/ui/input"
 import { Moon, Sun, Search, Code } from "lucide-react"
 import { useEffect, useState } from "react"
 import Link from "next/link"
-import { usePathname } from "next/navigation"
+import { usePathname, useRouter } from "next/navigation"
 import { MobileMenu } from "./MobileMenu"
 import { UserMenu } from "./UserMenu"
 import { motion } from "framer-motion"
-
-// Mock user data (replace with real authentication later)
-// const user = {
-//   name: "John Doe",
-//   image: "/placeholder.svg?height=32&width=32",
-// };
-
-const user = null
+import { useAuth } from "@/lib/auth"
 
 export function Header() {
   const { theme, setTheme } = useTheme()
   const [mounted, setMounted] = useState(false)
   const [scrolled, setScrolled] = useState(false)
+  const [searchTerm, setSearchTerm] = useState("")
   const pathname = usePathname()
+  const { user } = useAuth()
+  const router = useRouter()
 
   useEffect(() => {
     setMounted(true)
@@ -35,6 +31,13 @@ export function Header() {
   }, [])
 
   const isActive = (path: string) => pathname === path
+
+  const handleSearch = (e: React.FormEvent) => {
+    e.preventDefault()
+    if (searchTerm.trim()) {
+      router.push(`/search?q=${encodeURIComponent(searchTerm.trim())}`)
+    }
+  }
 
   // Render a placeholder during SSR
   if (!mounted) {
@@ -84,10 +87,16 @@ export function Header() {
           </nav>
 
           <div className="flex items-center space-x-4">
-            <div className="relative hidden md:block">
-              <Input type="search" placeholder="Buscar..." className="w-[200px] pl-8" />
+            <form onSubmit={handleSearch} className="relative hidden md:block">
+              <Input
+                type="search"
+                placeholder="Buscar..."
+                className="w-[200px] pl-8"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+              />
               <Search className="absolute left-2 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            </div>
+            </form>
 
             <Button
               variant="ghost"
@@ -103,9 +112,14 @@ export function Header() {
                 <UserMenu user={user} />
               </div>
             ) : (
-              <Button asChild variant="default" size="sm" className="hidden md:inline-flex">
-                <Link href="/signin">Iniciar sesión</Link>
-              </Button>
+              <div className="hidden md:flex space-x-2">
+                <Button asChild variant="ghost" size="sm">
+                  <Link href="/signin">Iniciar sesión</Link>
+                </Button>
+                <Button asChild variant="default" size="sm">
+                  <Link href="/signup">Registrarse</Link>
+                </Button>
+              </div>
             )}
 
             <MobileMenu theme={theme} setTheme={setTheme} user={user} />
