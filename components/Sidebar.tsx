@@ -3,9 +3,9 @@
 import React, { useEffect, useState } from "react"
 import Link from "next/link"
 import Image from "next/image"
-import { TrendingUp, Hash, ChevronRight } from "lucide-react"
+import { TrendingUp, Hash } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
-import { getRecommendedPosts } from "@/lib/mock-posts"
+import { getRecommendedPosts, mockPosts } from "@/lib/mock-posts"
 import type { Post } from "@/lib/types"
 
 interface Category {
@@ -14,20 +14,9 @@ interface Category {
   count: number
 }
 
-const defaultCategories: Category[] = [
-  { name: "JavaScript", slug: "javascript", count: 15 },
-  { name: "React", slug: "react", count: 12 },
-  { name: "Node.js", slug: "nodejs", count: 8 },
-  { name: "CSS", slug: "css", count: 10 },
-  { name: "TypeScript", slug: "typescript", count: 7 },
-]
-
-interface SidebarProps {
-  categories?: Category[]
-}
-
-export function Sidebar({ categories = defaultCategories }: SidebarProps) {
+export function Sidebar() {
   const [recommendedPosts, setRecommendedPosts] = useState<Post[]>([])
+  const [popularTags, setPopularTags] = useState<Category[]>([])
 
   useEffect(() => {
     const fetchRecommendedPosts = async () => {
@@ -36,7 +25,22 @@ export function Sidebar({ categories = defaultCategories }: SidebarProps) {
       setRecommendedPosts(posts)
     }
 
+    const getPopularTags = () => {
+      const tagCounts: { [key: string]: number } = {}
+      mockPosts.forEach((post) => {
+        post.tags.forEach((tag) => {
+          tagCounts[tag] = (tagCounts[tag] || 0) + 1
+        })
+      })
+      const sortedTags = Object.entries(tagCounts)
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 5)
+        .map(([name, count]) => ({ name, slug: name.toLowerCase(), count }))
+      setPopularTags(sortedTags)
+    }
+
     fetchRecommendedPosts()
+    getPopularTags()
   }, [])
 
   return (
@@ -70,49 +74,35 @@ export function Sidebar({ categories = defaultCategories }: SidebarProps) {
                   <div className="flex items-center mt-1 text-xs text-muted-foreground">
                     <span>{post.author.name}</span>
                     <span className="mx-1">•</span>
-                    <span>{new Date(post.publishDate).toLocaleDateString()}</span>
+                    <span>{new Date(post.publishDate).toLocaleDateString('ES-co')}</span>
                   </div>
                 </div>
               </Link>
             </li>
           ))}
         </ul>
-        <Link
-          href="/posts"
-          className="inline-flex items-center justify-center w-full mt-4 px-4 py-2 text-sm font-medium text-primary bg-primary/10 rounded-md hover:bg-primary/20 transition-colors"
-        >
-          Ver todos los posts
-          <ChevronRight className="ml-2 h-4 w-4" />
-        </Link>
       </div>
 
       <div className="bg-gradient-to-br from-accent/50 to-accent rounded-xl p-6 shadow-lg">
         <h2 className="text-2xl font-bold mb-4 flex items-center">
           <Hash className="mr-2 h-6 w-6 text-primary" />
-          Categorías Populares
+          Tags Populares
         </h2>
         <ul className="space-y-2">
-          {categories.map((category) => (
-            <li key={category.slug}>
+          {popularTags.map((tag) => (
+            <li key={tag.slug}>
               <Link
-                href={`/category/${category.slug}`}
+                href={`/search?tags=${encodeURIComponent(tag.name)}`}
                 className="flex items-center justify-between py-2 px-3 rounded-md hover:bg-accent/50 transition-colors group"
               >
-                <span className="text-sm font-medium group-hover:text-primary transition-colors">{category.name}</span>
+                <span className="text-sm font-medium group-hover:text-primary transition-colors">{tag.name}</span>
                 <Badge variant="secondary" className="text-xs">
-                  {category.count}
+                  {tag.count}
                 </Badge>
               </Link>
             </li>
           ))}
         </ul>
-        <Link
-          href="/categories"
-          className="inline-flex items-center justify-center w-full mt-4 px-4 py-2 text-sm font-medium text-primary bg-primary/10 rounded-md hover:bg-primary/20 transition-colors"
-        >
-          Ver todas las categorías
-          <ChevronRight className="ml-2 h-4 w-4" />
-        </Link>
       </div>
     </div>
   )

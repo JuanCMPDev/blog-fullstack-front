@@ -12,6 +12,9 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { Input } from "@/components/ui/input"
 import { useToast } from "@/hooks/use-toast"
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
+import { useAuth } from "@/lib/auth"
+import { User, UserRole } from "@/lib/types"
+import { useRouter} from 'next/navigation'
 
 const formSchema = z.object({
   email: z.string().email({
@@ -25,6 +28,9 @@ const formSchema = z.object({
 export default function SignIn() {
   const [isLoading, setIsLoading] = useState(false)
   const { toast } = useToast()
+  const setUser = useAuth((state) => state.setUser)
+  const router = useRouter()
+
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -33,16 +39,32 @@ export default function SignIn() {
       password: "",
     },
   })
-
-  function onSubmit() {
+  async function onSubmit(data: z.infer<typeof formSchema>) {
     setIsLoading(true)
-    // Simulate API call
+    // Simula una llamada a la API con un tiempo de espera
     setTimeout(() => {
       setIsLoading(false)
+
+      // Simula la respuesta de la API
+      const fakeUser: User = {
+        id: "123",
+        nick: "jcdev",
+        name: "Juan Carlos Dev",
+        email: data.email,
+        role: "admin" as UserRole,
+        avatar: "/placeholder.svg?height=40&width=40",
+      }
+
+      setUser(fakeUser)
+
       toast({
         title: "Inicio de sesión exitoso",
-        description: "Bienvenido de vuelta a JCDevBlog!",
+        description: `Bienvenido de vuelta, ${fakeUser.name}!`,
       })
+
+      // Redirige a la página de inicio
+      router.push("/")
+     
     }, 2000)
   }
 

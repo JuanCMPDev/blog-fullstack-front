@@ -1,4 +1,4 @@
-import React, { useRef, useEffect } from "react"
+import React, { useRef, useEffect, useState } from "react"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
@@ -36,13 +36,13 @@ const CommentItem: React.FC<{
     const replyInputRef = useRef<HTMLTextAreaElement>(null)
     const { user, isAdmin } = useAuth()
 
-    const canDeleteComment = isAdmin() || (user && user.id === comment.author.id)
-
     useEffect(() => {
       if (replyingTo === comment.id && replyInputRef.current) {
         replyInputRef.current.focus()
       }
     }, [replyingTo, comment.id])
+
+    const canDeleteComment = isAdmin() || (user && user.id === comment.author.id)
 
     return (
       <div className={`mb-6 ${depth > 0 ? "ml-8 pl-4 border-l border-gray-200 dark:border-gray-700" : ""}`}>
@@ -102,18 +102,20 @@ const CommentItem: React.FC<{
                   value={replyContent}
                   onChange={(e) => onReplyContentChange(e.target.value)}
                 />
-                <div className="flex justify-end space-x-2">
-                  <Button variant="outline" size="sm" onClick={onCancelReply}>
-                    Cancelar
-                  </Button>
-                  <Button
-                    size="sm"
-                    onClick={onSubmitReply}
-                    className="transition-all duration-200 ease-in-out hover:shadow-md"
-                  >
-                    <CornerDownRight className="w-4 h-4 mr-2" />
-                    Responder
-                  </Button>
+                <div className="flex justify-between items-center">
+                  <div className="flex space-x-2">
+                    <Button variant="outline" size="sm" onClick={onCancelReply}>
+                      Cancelar
+                    </Button>
+                    <Button
+                      size="sm"
+                      onClick={onSubmitReply}
+                      className="transition-all duration-200 ease-in-out hover:shadow-md"
+                    >
+                      <CornerDownRight className="w-4 h-4 mr-2" />
+                      Responder
+                    </Button>
+                  </div>
                 </div>
               </div>
             )}
@@ -159,7 +161,7 @@ export const Comments: React.FC<CommentsProps> = ({ comments: initialComments })
     deleteComment,
   } = useComments(initialComments)
 
-  const [newComment, setNewComment] = React.useState("")
+  const [newComment, setNewComment] = useState("")
   const { user } = useAuth()
 
   const handleNewComment = () => {
@@ -189,7 +191,7 @@ export const Comments: React.FC<CommentsProps> = ({ comments: initialComments })
                 onChange={(e) => setNewComment(e.target.value)}
                 className="mb-2 min-h-[100px] resize-none"
               />
-              <div className="flex justify-end">
+              <div className="flex justify-between items-center">
                 <Button onClick={handleNewComment} className="transition-all duration-200 ease-in-out hover:shadow-md">
                   <MessageSquare className="w-4 h-4 mr-2" />
                   Enviar comentario

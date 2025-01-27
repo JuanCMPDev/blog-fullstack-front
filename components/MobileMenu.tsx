@@ -20,7 +20,7 @@ interface NavItem {
 
 const NavbarLinks: NavItem[] = [
   { id: "home", label: "Inicio", href: "/", icon: Home },
-  { id: "exercises", label: "Ejercicios", href: "/ejercicios", icon: Dumbbell },
+  { id: "exercises", label: "Ejercicios", href: "/exercises", icon: Dumbbell },
   { id: "contact", label: "Contacto", href: "/contacto", icon: Mail },
 ]
 

@@ -1,19 +1,21 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import Image from "next/image"
 import { useParams, useRouter } from "next/navigation"
 import { motion } from "framer-motion"
 import { format } from "date-fns"
 import { es } from "date-fns/locale"
-import { Heart, MessageCircle, Share2, Bookmark, Calendar, Clock } from "lucide-react"
+import { ThumbsUp, MessageCircle, Bookmark, Calendar, Clock, Settings } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { Badge } from "@/components/ui/badge"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Skeleton } from "@/components/ui/skeleton"
 import { CodeBlock } from "@/components/CodeBlock"
 import { Comments } from "@/components/Comments"
 import { mockPosts } from "@/lib/mock-posts"
+import { useAuth } from "@/lib/auth"
+import { Tag } from "@/components/Tag"
+import { ShareMenu } from "@/components/ShareMenu"
 import type { Post } from "@/lib/types"
 
 const mockComments = [
@@ -49,6 +51,8 @@ export default function PostPage() {
   const [post, setPost] = useState<Post | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const router = useRouter()
+  const { isAdmin } = useAuth()
+  const commentSectionRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     const fetchPost = () => {
@@ -81,6 +85,10 @@ export default function PostPage() {
     return elements
   }
 
+  const scrollToComments = () => {
+    commentSectionRef.current?.scrollIntoView({ behavior: "smooth" })
+  }
+
   if (isLoading) {
     return (
       <div className="container mx-auto px-4 py-8">
@@ -99,70 +107,70 @@ export default function PostPage() {
   if (!post) return null
 
   return (
-    <motion.article
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.5 }}
-      className="container mx-auto px-4 py-8"
-    >
-      <div className="relative w-full aspect-video mb-8">
-        <Image
-          src={post.coverImage || "/placeholder.svg"}
-          alt={post.title}
-          fill
-          className="object-cover rounded-lg shadow-lg"
-          priority
-        />
-      </div>
-      <h1 className="text-3xl sm:text-4xl font-bold mb-4">{post.title}</h1>
-      <div className="flex items-center space-x-4 mb-6">
-        <Avatar className="w-10 h-10">
-          <AvatarImage src={post.author.avatar} alt={post.author.name} />
-          <AvatarFallback>{post.author.name.charAt(0)}</AvatarFallback>
-        </Avatar>
-        <div>
-          <p className="font-semibold">{post.author.name}</p>
-          <div className="flex items-center text-sm text-muted-foreground">
-            <Calendar className="mr-2 h-4 w-4" />
-            <span>{format(new Date(post.publishDate), "dd MMMM, yyyy", { locale: es })}</span>
-            <span className="mx-2">•</span>
-            <Clock className="mr-2 h-4 w-4" />
-            <span>{post.readTime} min de lectura</span>
+    <div className="container mx-auto px-4 py-8">
+      <motion.article initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}>
+        <div className="relative w-full aspect-video mb-8">
+          <Image
+            src={post.coverImage || "/placeholder.svg"}
+            alt={post.title}
+            fill
+            className="object-cover rounded-lg shadow-lg"
+            priority
+          />
+        </div>
+        <h1 className="text-3xl sm:text-4xl font-bold mb-4">{post.title}</h1>
+        <div className="flex items-center space-x-4 mb-6">
+          <Avatar className="w-10 h-10">
+            <AvatarImage src={post.author.avatar} alt={post.author.name} />
+            <AvatarFallback>{post.author.name.charAt(0)}</AvatarFallback>
+          </Avatar>
+          <div>
+            <p className="font-semibold">{post.author.name}</p>
+            <div className="flex items-center text-sm text-muted-foreground">
+              <Calendar className="mr-2 h-4 w-4" />
+              <span>{format(new Date(post.publishDate), "dd MMMM, yyyy", { locale: es })}</span>
+              <span className="mx-2">•</span>
+              <Clock className="mr-2 h-4 w-4" />
+              <span>{post.readTime} min de lectura</span>
+            </div>
           </div>
         </div>
-      </div>
-      <div className="flex flex-wrap gap-2 mb-6">
-        {post.tags.map((tag: string) => (
-          <Badge key={tag} variant="secondary">
-            {tag}
-          </Badge>
-        ))}
-      </div>
-      <div className="prose prose-lg dark:prose-invert max-w-none mb-8">{renderContent(post.content)}</div>
-      <div className="flex items-center justify-between border-t border-b py-4 mb-8">
-        <div className="flex items-center space-x-2 sm:space-x-4">
-          <Button variant="ghost" size="sm" className="text-xs sm:text-sm px-2 sm:px-3">
-            <Heart className="h-4 w-4 mr-1 sm:mr-2" />
-            <span>{post.likes}</span>
-          </Button>
-          <Button variant="ghost" size="sm" className="text-xs sm:text-sm px-2 sm:px-3">
-            <MessageCircle className="h-4 w-4 mr-1 sm:mr-2" />
-            <span>{post.comments}</span>
-          </Button>
+        <div className="flex flex-wrap gap-2 mb-6">
+          {post.tags.map((tag, index) => (
+            <Tag key={index} name={tag} />
+          ))}
         </div>
-        <div className="flex items-center space-x-2 sm:space-x-4">
-          <Button variant="ghost" size="sm" className="text-xs sm:text-sm px-2 sm:px-3">
-            <Share2 className="h-4 w-4 sm:mr-2" />
-            <span className="hidden sm:inline">Compartir</span>
-          </Button>
-          <Button variant="ghost" size="sm" className="text-xs sm:text-sm px-2 sm:px-3">
-            <Bookmark className="h-4 w-4 sm:mr-2" />
-            <span className="hidden sm:inline">Guardar</span>
-          </Button>
+        <div className="prose prose-lg dark:prose-invert max-w-none mb-8">{renderContent(post.content)}</div>
+        <div className="flex items-center justify-between border-t border-b py-4 mb-8">
+          <div className="flex items-center space-x-2 sm:space-x-4">
+            <Button variant="ghost" size="sm" className="text-xs sm:text-sm px-2 sm:px-3">
+              <ThumbsUp className="h-4 w-4 mr-1 sm:mr-2" />
+              <span>{post.likes}</span>
+            </Button>
+            <Button variant="ghost" size="sm" className="text-xs sm:text-sm px-2 sm:px-3" onClick={scrollToComments}>
+              <MessageCircle className="h-4 w-4 mr-1 sm:mr-2" />
+              <span>{post.comments}</span>
+            </Button>
+          </div>
+          <div className="flex items-center space-x-2 sm:space-x-4">
+            <ShareMenu url={`https://yourblog.com/post/${post.id}`} title={post.title} />
+            <Button variant="ghost" size="sm" className="text-xs sm:text-sm px-2 sm:px-3">
+              <Bookmark className="h-4 w-4 sm:mr-2" />
+              <span className="hidden sm:inline">Guardar</span>
+            </Button>
+            {isAdmin() && (
+              <Button variant="ghost" size="sm" className="text-xs sm:text-sm px-2 sm:px-3">
+                <Settings className="h-4 w-4 sm:mr-2" />
+                <span className="hidden sm:inline">Administrar</span>
+              </Button>
+            )}
+          </div>
         </div>
-      </div>
-      <Comments comments={mockComments} />
-    </motion.article>
+        <div ref={commentSectionRef}>
+          <Comments comments={mockComments} />
+        </div>
+      </motion.article>
+    </div>
   )
 }
 

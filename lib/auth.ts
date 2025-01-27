@@ -1,8 +1,6 @@
 import { create } from "zustand"
 import { persist } from "zustand/middleware"
-import { AuthState } from "@/lib/types"
-
-export type UserRole = "user" | "admin"
+import { AuthState, UserRole } from "@/lib/types"
 
 export const useAuth = create<AuthState>()(
   persist(
