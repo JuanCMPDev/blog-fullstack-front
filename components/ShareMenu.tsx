@@ -1,25 +1,34 @@
-import { useState, useRef, useEffect } from "react"
+import { useState, useRef } from "react"
 import { Button } from "@/components/ui/button"
-import { Share2, Facebook, Twitter, Linkedin, Link, Check, X } from "lucide-react"
+import { Share2, MessageCircle, MessageSquare, Linkedin, Copy, Check } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
-import { motion, AnimatePresence } from "framer-motion"
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 
 interface ShareMenuProps {
   url: string
   title: string
 }
 
+interface ShareOption {
+  name: string
+  icon: React.ElementType | string
+  color: string
+  action: () => void
+}
+
 export function ShareMenu({ url, title }: ShareMenuProps) {
   const [isOpen, setIsOpen] = useState(false)
   const [copied, setCopied] = useState(false)
   const { toast } = useToast()
-  const menuRef = useRef<HTMLDivElement>(null)
-  const buttonRef = useRef<HTMLButtonElement>(null)
+  const inputRef = useRef<HTMLInputElement>(null)
 
   const shortenedUrl = `https://short.url/${Math.random().toString(36).substr(2, 6)}`
 
   const handleCopy = () => {
-    navigator.clipboard.writeText(shortenedUrl)
+    if (inputRef.current) {
+      inputRef.current.select()
+      document.execCommand("copy")
+    }
     setCopied(true)
     toast({
       title: "URL copiado",
@@ -28,104 +37,114 @@ export function ShareMenu({ url, title }: ShareMenuProps) {
     setTimeout(() => setCopied(false), 3000)
   }
 
-  const shareLinks = [
+  const shareOptions: ShareOption[] = [
     {
-      name: "Facebook",
-      icon: Facebook,
-      url: `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(url)}`,
+      name: "WhatsApp",
+      icon: MessageCircle,
+      color: "bg-[#25D366] hover:bg-[#128C7E]",
+      action: () => window.open(`https://wa.me/?text=${encodeURIComponent(`${title} ${url}`)}`, "_blank"),
     },
     {
-      name: "Twitter",
-      icon: Twitter,
-      url: `https://twitter.com/intent/tweet?url=${encodeURIComponent(url)}&text=${encodeURIComponent(title)}`,
+      name: "Messenger",
+      icon: MessageSquare,
+      color: "bg-[#0099FF] hover:bg-[#006AFF]",
+      action: () =>
+        window.open(
+          `https://www.facebook.com/dialog/send?link=${encodeURIComponent(url)}&app_id=YOUR_FACEBOOK_APP_ID`,
+          "_blank",
+        ),
+    },
+    {
+      name: "X",
+      icon: () => (
+        <svg viewBox="0 0 24 24" className="h-6 w-6 sm:h-7 sm:w-7 fill-current">
+          <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
+        </svg>
+      ),
+      color: "bg-black hover:bg-gray-800",
+      action: () =>
+        window.open(
+          `https://twitter.com/intent/tweet?url=${encodeURIComponent(url)}&text=${encodeURIComponent(title)}`,
+          "_blank",
+        ),
     },
     {
       name: "LinkedIn",
       icon: Linkedin,
-      url: `https://www.linkedin.com/shareArticle?mini=true&url=${encodeURIComponent(url)}&title=${encodeURIComponent(title)}`,
+      color: "bg-[#0A66C2] hover:bg-[#004182]",
+      action: () =>
+        window.open(
+          `https://www.linkedin.com/shareArticle?mini=true&url=${encodeURIComponent(url)}&title=${encodeURIComponent(title)}`,
+          "_blank",
+        ),
     },
   ]
 
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (
-        menuRef.current &&
-        !menuRef.current.contains(event.target as Node) &&
-        buttonRef.current &&
-        !buttonRef.current.contains(event.target as Node)
-      ) {
-        setIsOpen(false)
-      }
-    }
-
-    document.addEventListener("mousedown", handleClickOutside)
-    return () => {
-      document.removeEventListener("mousedown", handleClickOutside)
-    }
-  }, [])
-
   return (
-    <div className="relative">
+    <>
       <Button
-        ref={buttonRef}
         variant="ghost"
         size="sm"
         className="text-xs sm:text-sm px-2 sm:px-3 flex items-center justify-start"
-        onClick={() => setIsOpen(!isOpen)}
+        onClick={() => setIsOpen(true)}
       >
         <Share2 className="h-4 w-4 sm:mr-2 flex-shrink-0" />
-        <span className="hidden sm:inline">Compartir</span>
+        <span className="hidden sm:inline ml-2">Compartir</span>
       </Button>
-      <AnimatePresence>
-        {isOpen && (
-          <motion.div
-            ref={menuRef}
-            initial={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0, scale: 0.95 }}
-            transition={{ duration: 0.2 }}
-            className="absolute right-0 mt-2 w-72 p-4 bg-gradient-to-br from-background to-secondary/20 backdrop-blur-sm border border-primary/20 rounded-lg shadow-lg z-50"
-            style={{ transform: "translateX(-50%)", right: "50%" }}
-          >
-            <div className="flex justify-between items-center mb-4">
-              <h4 className="font-semibold text-lg">Compartir artículo</h4>
-              <Button variant="ghost" size="sm" onClick={() => setIsOpen(false)}>
-                <X className="h-4 w-4" />
-              </Button>
-            </div>
-            <div className="flex justify-center space-x-4 mb-4">
-              {shareLinks.map((link) => (
-                <a
-                  key={link.name}
-                  href={link.url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex items-center justify-center w-12 h-12 rounded-full bg-primary/10 hover:bg-primary/20 hover:scale-110 transition-all duration-200"
-                  aria-label={`Compartir en ${link.name}`}
-                >
-                  <link.icon className="h-6 w-6 text-primary" />
-                </a>
+
+      <Dialog open={isOpen} onOpenChange={setIsOpen}>
+        <DialogContent className="sm:max-w-md max-w-[calc(100%-2rem)] p-6 bg-gradient-to-br from-background to-background/95">
+          <DialogHeader>
+            <DialogTitle className="text-center text-2xl font-bold">Compartir artículo</DialogTitle>
+          </DialogHeader>
+          <div className="flex flex-col items-center space-y-4 sm:space-y-6 mt-4">
+            <div className="flex justify-center space-x-3 sm:space-x-6 w-full">
+              {shareOptions.map((option) => (
+                <div key={option.name} className="flex flex-col items-center space-y-1 sm:space-y-2">
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    className={`w-12 h-12 sm:w-14 sm:h-14 rounded-full ${option.color} text-white transition-all duration-300 ease-in-out transform hover:scale-105 focus:scale-105 active:scale-95`}
+                    onClick={option.action}
+                  >
+                    {typeof option.icon === "function" ? (
+                      <option.icon />
+                    ) : (
+                      <option.icon />
+                    )}
+                  </Button>
+                  <span className="text-[10px] sm:text-xs font-medium">{option.name}</span>
+                </div>
               ))}
             </div>
-            <div className="relative">
+            <div className="relative w-full max-w-sm">
               <input
+                ref={inputRef}
                 type="text"
                 value={shortenedUrl}
                 readOnly
-                className="w-full px-3 py-2 text-sm border rounded-md pr-12 bg-background/50"
+                className="w-full px-4 py-2 text-sm border rounded-full bg-background focus:outline-none focus:ring-2 focus:ring-primary transition-all duration-300 ease-in-out pr-24"
               />
               <Button
                 size="sm"
                 onClick={handleCopy}
-                className="absolute right-1 top-1/2 transform -translate-y-1/2 hover:bg-primary/20 transition-colors duration-200"
+                className="absolute right-1 top-1/2 transform -translate-y-1/2 rounded-full transition-all duration-300 ease-in-out hover:bg-primary hover:text-primary-foreground text-xs sm:text-sm"
               >
-                {copied ? <Check className="h-4 w-4" /> : <Link className="h-4 w-4" />}
+                {copied ? (
+                  <Check className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
+                ) : (
+                  <Copy className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
+                )}
+                {copied ? "Copiado" : "Copiar"}
               </Button>
             </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-    </div>
+            <p className="text-xs sm:text-sm text-foreground/80 text-center font-medium">
+              Comparte este artículo con tus amigos y colegas
+            </p>
+          </div>
+        </DialogContent>
+      </Dialog>
+    </>
   )
 }
 

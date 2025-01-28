@@ -17,6 +17,7 @@ import { useAuth } from "@/lib/auth"
 import { Tag } from "@/components/Tag"
 import { ShareMenu } from "@/components/ShareMenu"
 import type { Post } from "@/lib/types"
+import { useToast } from "@/hooks/use-toast"
 
 const mockComments = [
   {
@@ -51,8 +52,9 @@ export default function PostPage() {
   const [post, setPost] = useState<Post | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const router = useRouter()
-  const { isAdmin } = useAuth()
+  const { isAdmin, user } = useAuth()
   const commentSectionRef = useRef<HTMLDivElement>(null)
+  const { toast } = useToast()
 
   useEffect(() => {
     const fetchPost = () => {
@@ -86,7 +88,28 @@ export default function PostPage() {
   }
 
   const scrollToComments = () => {
+    if (!user) {
+      toast({
+        title: "Inicio de sesión requerido",
+        description: "Debes iniciar sesión para comentar.",
+        variant: "destructive",
+      })
+      return
+    }
     commentSectionRef.current?.scrollIntoView({ behavior: "smooth" })
+  }
+
+  const handleLike = () => {
+    if (!user) {
+      toast({
+        title: "Inicio de sesión requerido",
+        description: "Debes iniciar sesión para dar like.",
+        variant: "destructive",
+      })
+      return
+    }
+    // Aquí iría la lógica para dar like al post
+    console.log("Like dado al post")
   }
 
   if (isLoading) {
@@ -143,7 +166,7 @@ export default function PostPage() {
         <div className="prose prose-lg dark:prose-invert max-w-none mb-8">{renderContent(post.content)}</div>
         <div className="flex items-center justify-between border-t border-b py-4 mb-8">
           <div className="flex items-center space-x-2 sm:space-x-4">
-            <Button variant="ghost" size="sm" className="text-xs sm:text-sm px-2 sm:px-3">
+            <Button variant="ghost" size="sm" className="text-xs sm:text-sm px-2 sm:px-3" onClick={handleLike}>
               <ThumbsUp className="h-4 w-4 mr-1 sm:mr-2" />
               <span>{post.likes}</span>
             </Button>

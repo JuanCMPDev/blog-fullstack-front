@@ -8,8 +8,10 @@ import { es } from "date-fns/locale"
 import { useComments } from "@/hooks/useComments"
 import { useAuth } from "@/lib/auth"
 import type { Comment, CommentsProps } from "@/lib/types"
+import Link from "next/link"
+import { useToast } from "@/hooks/use-toast"
 
-const CommentItem: React.FC<{
+interface CommentItemProps {
   comment: Comment
   depth?: number
   onReply: (id: string) => void
@@ -20,7 +22,9 @@ const CommentItem: React.FC<{
   onReplyContentChange: (content: string) => void
   onSubmitReply: () => void
   onCancelReply: () => void
-}> = React.memo(
+}
+
+const CommentItem: React.FC<CommentItemProps> = React.memo(
   ({
     comment,
     depth = 0,
@@ -35,6 +39,7 @@ const CommentItem: React.FC<{
   }) => {
     const replyInputRef = useRef<HTMLTextAreaElement>(null)
     const { user, isAdmin } = useAuth()
+    const { toast } = useToast()
 
     useEffect(() => {
       if (replyingTo === comment.id && replyInputRef.current) {
@@ -43,6 +48,30 @@ const CommentItem: React.FC<{
     }, [replyingTo, comment.id])
 
     const canDeleteComment = isAdmin() || (user && user.id === comment.author.id)
+
+    const handleLike = () => {
+      if (!user) {
+        toast({
+          title: "Inicio de sesión requerido",
+          description: "Debes iniciar sesión para dar like.",
+          variant: "destructive",
+        })
+        return
+      }
+      onLike(comment.id)
+    }
+
+    const handleReply = () => {
+      if (!user) {
+        toast({
+          title: "Inicio de sesión requerido",
+          description: "Debes iniciar sesión para responder.",
+          variant: "destructive",
+        })
+        return
+      }
+      onReply(comment.id)
+    }
 
     return (
       <div className={`mb-6 ${depth > 0 ? "ml-8 pl-4 border-l border-gray-200 dark:border-gray-700" : ""}`}>
@@ -77,7 +106,7 @@ const CommentItem: React.FC<{
               <Button
                 variant="ghost"
                 size="sm"
-                onClick={() => onLike(comment.id)}
+                onClick={handleLike}
                 className="text-muted-foreground hover:text-primary text-xs"
               >
                 <ThumbsUp className="w-4 h-4 mr-1" />
@@ -86,7 +115,7 @@ const CommentItem: React.FC<{
               <Button
                 variant="ghost"
                 size="sm"
-                onClick={() => onReply(comment.id)}
+                onClick={handleReply}
                 className="text-muted-foreground hover:text-primary text-xs"
               >
                 <MessageSquare className="w-4 h-4 mr-1" />
@@ -163,14 +192,18 @@ export const Comments: React.FC<CommentsProps> = ({ comments: initialComments })
 
   const [newComment, setNewComment] = useState("")
   const { user } = useAuth()
+  const { toast } = useToast()
 
   const handleNewComment = () => {
     if (user) {
       addNewComment(newComment, user.id)
       setNewComment("")
     } else {
-      // Manejar el caso de usuario no autenticado
-      alert("Debes iniciar sesión para comentar")
+      toast({
+        title: "Inicio de sesión requerido",
+        description: "Debes iniciar sesión para comentar.",
+        variant: "destructive",
+      })
     }
   }
 
@@ -201,7 +234,12 @@ export const Comments: React.FC<CommentsProps> = ({ comments: initialComments })
           </div>
         </div>
       ) : (
-        <p className="mb-6 text-center text-muted-foreground">Inicia sesión para dejar un comentario.</p>
+        <div className="mb-6 text-center">
+          <p className="text-muted-foreground mb-2">Inicia sesión para dejar un comentario.</p>
+          <Button variant="outline" asChild>
+            <Link href="/signin">Iniciar sesión</Link>
+          </Button>
+        </div>
       )}
       {comments.map((comment) => (
         <CommentItem
