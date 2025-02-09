@@ -15,7 +15,6 @@ export function SettingsDialog({ open, onClose }: { open: boolean; onClose: () =
           </DialogDescription>
         </DialogHeader>
         <div className="grid gap-4">
-          {/* rest of code here */}
         </div>
       </DialogContent>
       <DialogFooter>

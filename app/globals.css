@@ -107,7 +107,7 @@ body {
   background-color: transparent;
 }
 
-.prose pre > div {
+.prose pre>div {
   margin: 0 !important;
   padding: 0 !important;
 }
@@ -126,13 +126,14 @@ body {
     @apply overflow-x-auto;
   }
 
-  .prose pre > div {
+  .prose pre>div {
     @apply !m-0;
   }
 
   .prose code {
     @apply text-sm sm:text-base;
   }
+
   .prose {
     @apply max-w-full;
   }
@@ -159,7 +160,231 @@ body {
     @apply text-base sm:text-lg md:text-xl;
   }
 
-  .prose *:not(pre) > code {
+  .prose *:not(pre)>code {
     @apply whitespace-normal break-words;
   }
+}
+
+input,
+textarea {
+  transition: all 0.2s ease-in-out;
+}
+
+input:focus,
+textarea:focus {
+  box-shadow: 0 0 0 2px hsl(var(--ring));
+}
+
+.dark .table {
+  --tw-bg-opacity: 0.05;
+  background-color: rgba(255, 255, 255, var(--tw-bg-opacity));
+}
+
+.dark .table th {
+  background-color: rgba(255, 255, 255, 0.1);
+}
+
+.dark .table tr:hover {
+  background-color: rgba(255, 255, 255, 0.05);
+}
+
+/* Estilos para react-quill-new */
+.ql-container {
+  border-bottom-left-radius: 0.5rem !important;
+  border-bottom-right-radius: 0.5rem !important;
+  background: hsl(var(--background));
+  color: hsl(var(--foreground));
+}
+
+.ql-toolbar {
+  border-top-left-radius: 0.5rem !important;
+  border-top-right-radius: 0.5rem !important;
+  background: hsl(var(--secondary));
+  border-color: hsl(var(--border)) !important;
+}
+
+.ql-editor {
+  min-height: 350px !important;
+}
+
+.ql-toolbar.ql-snow,
+.ql-container.ql-snow {
+  border-color: hsl(var(--border)) !important;
+}
+
+.ql-toolbar .ql-stroke {
+  stroke: hsl(var(--foreground));
+}
+
+.ql-toolbar .ql-fill {
+  fill: hsl(var(--foreground));
+}
+
+.ql-toolbar .ql-picker {
+  color: hsl(var(--foreground));
+}
+
+.ql-editor.ql-blank::before {
+  color: hsl(var(--muted-foreground));
+}
+
+.ql-snow .ql-picker-options {
+  background-color: hsl(var(--background));
+  border-color: hsl(var(--border));
+}
+
+.ql-snow .ql-tooltip {
+  background-color: hsl(var(--background));
+  border-color: hsl(var(--border));
+  color: hsl(var(--foreground));
+}
+
+.ql-snow .ql-tooltip input[type="text"] {
+  border-color: hsl(var(--border));
+  color: hsl(var(--foreground));
+}
+
+.ql-snow .ql-editor pre.ql-syntax {
+  background-color: hsl(var(--secondary));
+  color: hsl(var(--foreground));
+}
+
+.ql-snow .ql-editor blockquote {
+  border-left-color: hsl(var(--border));
+}
+
+.ql-snow .ql-editor a {
+  color: hsl(var(--primary));
+}
+
+/* Estilos para el texto coloreado */
+.ql-editor .ql-color-white {
+  color: hsl(var(--background)) !important;
+}
+
+.ql-editor .ql-color-black {
+  color: hsl(var(--foreground)) !important;
+}
+
+/* Estilos mejorados para react-tagsinput */
+.react-tagsinput {
+  background-color: transparent;
+  border: 1px solid hsl(var(--border));
+  border-radius: 0.5rem;
+  padding: 0.5rem;
+  overflow: hidden;
+}
+
+.react-tagsinput--focused {
+  border-color: hsl(var(--ring));
+  outline: none;
+}
+
+.react-tagsinput-tag {
+  background-color: hsl(var(--primary));
+  color: hsl(var(--primary-foreground));
+  border-radius: 0.25rem;
+  border: none;
+  display: inline-block;
+  font-size: 0.875rem;
+  font-weight: 500;
+  margin: 0.25rem;
+  padding: 0.25rem 0.5rem;
+}
+
+.react-tagsinput-remove {
+  cursor: pointer;
+  font-weight: bold;
+  margin-left: 0.25rem;
+}
+
+.react-tagsinput-tag a::before {
+  content: " ×";
+}
+
+.react-tagsinput-input {
+  background: transparent;
+  border: 0;
+  color: hsl(var(--foreground));
+  font-size: 0.875rem;
+  font-weight: 400;
+  margin: 0.25rem;
+  outline: none;
+  padding: 0.25rem;
+  width: 120px;
+}
+
+/* Estilos para los iconos de Quill en modo oscuro */
+.dark .ql-snow.ql-toolbar button svg,
+.dark .ql-snow .ql-toolbar button svg {
+  filter: invert(1);
+}
+
+.dark .ql-snow.ql-toolbar button:hover svg,
+.dark .ql-snow .ql-toolbar button:hover svg,
+.dark .ql-snow.ql-toolbar button.ql-active svg,
+.dark .ql-snow .ql-toolbar button.ql-active svg {
+  filter: invert(1) brightness(0.8);
+}
+
+.dark .ql-snow.ql-toolbar .ql-picker-label,
+.dark .ql-snow .ql-toolbar .ql-picker-label {
+  color: hsl(var(--foreground));
+}
+
+.dark .ql-snow.ql-toolbar .ql-picker-options,
+.dark .ql-snow .ql-toolbar .ql-picker-options {
+  background-color: hsl(var(--background));
+  border-color: hsl(var(--border));
+}
+
+.dark .ql-snow.ql-toolbar .ql-picker-options .ql-picker-item,
+.dark .ql-snow .ql-toolbar .ql-picker-options .ql-picker-item {
+  color: hsl(var(--foreground));
+}
+
+/* Estilos para el scroll del editor Quill */
+.ql-container {
+  height: 400px !important;
+  /* Altura fija para el contenedor */
+  overflow: hidden;
+  /* Oculta el scroll por defecto */
+}
+
+.ql-editor {
+  height: 100% !important;
+  overflow-y: auto !important;
+  /* Habilita el scroll vertical */
+  padding-right: 20px;
+  /* Espacio para el scrollbar personalizado */
+}
+
+/* Estilizar el scrollbar */
+.ql-editor::-webkit-scrollbar {
+  width: 8px;
+}
+
+.ql-editor::-webkit-scrollbar-track {
+  background: hsl(var(--secondary));
+  border-radius: 4px;
+}
+
+.ql-editor::-webkit-scrollbar-thumb {
+  background: hsl(var(--primary) / 0.5);
+  border-radius: 4px;
+}
+
+.ql-editor::-webkit-scrollbar-thumb:hover {
+  background: hsl(var(--primary) / 0.7);
+}
+
+/* Estilos para Firefox */
+.ql-editor {
+  scrollbar-width: thin;
+  scrollbar-color: hsl(var(--primary) / 0.5) hsl(var(--secondary));
+}
+
+/* Ajustar el padding del contenedor para compensar el scrollbar */
+.ql-container.ql-snow {
+  padding-right: 8px;
 }

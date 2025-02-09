@@ -1,3 +1,5 @@
+import { z } from "zod"
+
 // Enums para valores restringidos
 export enum UserRole {
   Admin = "admin",
@@ -52,7 +54,7 @@ export interface Post extends BasePost {
   author: Author
   coverImage: string
   date: string
-  publishDate: string
+  publishDate: string | null
   readTime: number
 }
 
@@ -166,3 +168,19 @@ export type Settings = {
   fontSize: FontSize
   postLayout: PostLayout
 }
+
+export const postSchema = z.object({
+  title: z.string().min(1, "El título es requerido"),
+  excerpt: z.string().min(1, "El extracto es requerido"),
+  content: z.string().min(1, "El contenido es requerido"),
+  tags: z.array(z.string()).min(1, "Debes agregar al menos un tag"),
+  coverImage: z
+    .any()
+    .refine((files) => !files || files?.length === 0 || files[0]?.size <= 10 * 1024 * 1024, "El tamaño máximo es 10MB")
+    .refine(
+      (files) => !files || files?.length === 0 || ["image/jpeg", "image/png", "image/gif"].includes(files[0]?.type),
+      "Solo se permiten formatos .jpg, .png o .gif"
+    )
+});
+
+export type PostFormData = z.infer<typeof postSchema>

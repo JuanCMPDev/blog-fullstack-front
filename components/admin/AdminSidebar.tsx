@@ -18,7 +18,6 @@ import {
   LogOut,
   ChevronDown,
   UserPlus,
-  UserX,
   PenSquare,
   ListTodo,
   type LucideIcon,
@@ -41,10 +40,7 @@ const sidebarNavItems: NavItem[] = [
   {
     title: "Usuarios",
     icon: Users,
-    subItems: [
-      { title: "Administrar Usuarios", href: "/admin/users", icon: UserPlus },
-      { title: "Usuarios Baneados", href: "/admin/users/banned", icon: UserX },
-    ],
+    subItems: [{ title: "Administrar Usuarios", href: "/admin/users", icon: UserPlus }],
   },
   {
     title: "Posts",
@@ -133,7 +129,7 @@ export function AdminSidebar() {
       className="hidden lg:flex h-screen w-64 flex-col bg-background border-r"
     >
       <div className="flex h-16 items-center justify-center bg-accent/50">
-        <Link href="/admin" className="flex items-center space-x-2">
+        <Link href="/" className="flex items-center space-x-2">
           <div className="w-6 h-6 bg-primary rounded-full flex items-center justify-center">
             <span className="text-sm font-bold text-primary-foreground">A</span>
           </div>

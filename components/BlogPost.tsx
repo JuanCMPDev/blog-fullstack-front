@@ -29,7 +29,7 @@ export function BlogPost({
         <Link
           href={`/post/${id}`}
           className={`block ${isMobile ? "cursor-default active:cursor-pointer" : ""}`}
-          {...(isMobile ? { onTouchStart: () => {} } : {})}
+          {...(isMobile ? { onTouchStart: () => { } } : {})}
         >
           <Image
             src={image || "/placeholder.svg"}
@@ -62,7 +62,7 @@ export function BlogPost({
             <p className="font-medium">{author.name}</p>
             <div className="flex items-center">
               <Calendar className="h-3 w-3 mr-1" />
-              <span className="mr-2">{format(new Date(publishDate), "d MMM, yyyy", { locale: es })}</span>
+              <span className="mr-2">{format(new Date(publishDate as string), "d MMM, yyyy", { locale: es })}</span>
               <Clock className="h-3 w-3 mr-1" />
               <span>{readTime} min</span>
             </div>

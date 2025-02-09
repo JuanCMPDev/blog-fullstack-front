@@ -74,7 +74,7 @@ export function Sidebar() {
                   <div className="flex items-center mt-1 text-xs text-muted-foreground">
                     <span>{post.author.name}</span>
                     <span className="mx-1">•</span>
-                    <span>{new Date(post.publishDate).toLocaleDateString('ES-co')}</span>
+                    <span>{new Date(post.publishDate as string).toLocaleDateString('ES-co')}</span>
                   </div>
                 </div>
               </Link>

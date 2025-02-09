@@ -22,7 +22,7 @@ export default function EnConstruccion() {
   }
 
   return (
-    <div className="flex items-center justify-center min-h-[calc(100vh-8rem)] bg-background px-4">
+    <div className="flex items-center justify-center min-h-[calc(100vh-8rem)] bg-background px-4 bg-dot-pattern">
       <div className="text-center max-w-2xl mx-auto">
         <motion.div
           className="text-8xl font-extrabold text-primary mb-8 flex justify-center items-center"

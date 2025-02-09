@@ -146,7 +146,6 @@ export default function ProfilePage() {
                       <Badge
                         key={skill}
                         variant="secondary"
-                        className="bg-primary/10 text-primary hover:bg-primary/20 transition-colors"
                       >
                         {skill}
                       </Badge>
@@ -158,8 +157,8 @@ export default function ProfilePage() {
           </CardContent>
         </Card>
 
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-          <Card className="lg:col-span-3">
+        <div className="gap-6">
+          <Card >
             <CardHeader>
               <CardTitle className="text-primary">Actividad</CardTitle>
             </CardHeader>
@@ -233,27 +232,6 @@ export default function ProfilePage() {
                   </div>
                 </TabsContent>
               </Tabs>
-            </CardContent>
-          </Card>
-          <Card className="lg:col-span-1">
-            <CardHeader>
-              <CardTitle className="text-primary">Estadísticas</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                <div>
-                  <p className="text-2xl font-bold text-foreground">{profile.stats.savedPosts}</p>
-                  <p className="text-sm text-muted-foreground">Posts Guardados</p>
-                </div>
-                <div>
-                  <p className="text-2xl font-bold text-foreground">{profile.stats.followers}</p>
-                  <p className="text-sm text-muted-foreground">Seguidores</p>
-                </div>
-                <div>
-                  <p className="text-2xl font-bold text-foreground">{profile.stats.following}</p>
-                  <p className="text-sm text-muted-foreground">Siguiendo</p>
-                </div>
-              </div>
             </CardContent>
           </Card>
         </div>

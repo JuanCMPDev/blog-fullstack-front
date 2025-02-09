@@ -102,106 +102,108 @@ export default function SearchPage() {
   }
 
   return (
-    <div className="container mx-auto px-4 py-8">
-      <div className="flex flex-col lg:flex-row gap-8">
-        <main className="w-full lg:w-2/3">
-          <h1 className="text-3xl font-bold mb-6">Resultados de búsqueda</h1>
-          <Card className="mb-8">
-            <CardHeader>
-              <CardTitle>Búsqueda y Ordenación</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <form onSubmit={handleSearch} className="space-y-4">
-                <div className="flex flex-col sm:flex-row gap-4">
-                  <div className="relative flex-grow">
-                    <Input
-                      type="search"
-                      placeholder="Buscar posts..."
-                      value={searchTerm}
-                      onChange={(e) => setSearchTerm(e.target.value)}
-                      className="pl-10"
-                    />
-                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground" />
+    <div className="bg-dot-pattern">
+      <div className="container mx-auto px-4 py-8">
+        <div className="flex flex-col lg:flex-row gap-8">
+          <main className="w-full lg:w-2/3">
+            <h1 className="text-3xl font-bold mb-6">Resultados de búsqueda</h1>
+            <Card className="mb-8">
+              <CardHeader>
+                <CardTitle>Búsqueda y Ordenación</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <form onSubmit={handleSearch} className="space-y-4">
+                  <div className="flex flex-col sm:flex-row gap-4">
+                    <div className="relative flex-grow">
+                      <Input
+                        type="search"
+                        placeholder="Buscar posts..."
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                        className="pl-10"
+                      />
+                      <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground" />
+                    </div>
+                    <Button type="submit">Buscar</Button>
                   </div>
-                  <Button type="submit">Buscar</Button>
-                </div>
-                <div className="flex flex-wrap gap-2">
-                  {selectedTags.map((tag) => (
-                    <Badge key={tag} variant="secondary" className="px-2 py-1">
-                      {tag}
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="sm"
-                        className="ml-2 h-4 w-4 p-0"
-                        onClick={() => handleTagRemove(tag)}
-                      >
-                        <X className="h-3 w-3" />
-                      </Button>
-                    </Badge>
-                  ))}
-                </div>
-                <div className="flex flex-col sm:flex-row items-center gap-4">
-                  <div className="w-full sm:w-1/3">
-                    <Select value={sortBy} onValueChange={handleSortChange}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Ordenar por" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="date">Fecha</SelectItem>
-                        <SelectItem value="votes">Votos</SelectItem>
-                        <SelectItem value="comments">Comentarios</SelectItem>
-                      </SelectContent>
-                    </Select>
+                  <div className="flex flex-wrap gap-2">
+                    {selectedTags.map((tag) => (
+                      <Badge key={tag} variant="secondary">
+                        {tag}
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          className="ml-2 h-4 w-4 p-0"
+                          onClick={() => handleTagRemove(tag)}
+                        >
+                          <X className="h-3 w-3" />
+                        </Button>
+                      </Badge>
+                    ))}
                   </div>
-                  <Button variant="outline" onClick={toggleSortOrder} className="w-full sm:w-auto">
-                    {sortOrder === "asc" ? <SortAsc className="mr-2" /> : <SortDesc className="mr-2" />}
-                    {sortOrder === "asc" ? "Ascendente" : "Descendente"}
-                  </Button>
-                </div>
-              </form>
-            </CardContent>
-          </Card>
+                  <div className="flex flex-col sm:flex-row items-center gap-4">
+                    <div className="w-full sm:w-1/3">
+                      <Select value={sortBy} onValueChange={handleSortChange}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Ordenar por" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="date">Fecha</SelectItem>
+                          <SelectItem value="votes">Votos</SelectItem>
+                          <SelectItem value="comments">Comentarios</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <Button variant="outline" onClick={toggleSortOrder} className="w-full sm:w-auto">
+                      {sortOrder === "asc" ? <SortAsc className="mr-2" /> : <SortDesc className="mr-2" />}
+                      {sortOrder === "asc" ? "Ascendente" : "Descendente"}
+                    </Button>
+                  </div>
+                </form>
+              </CardContent>
+            </Card>
 
-          {(query || selectedTags.length > 0) && (
-            <p className="text-lg mb-4">
-              Mostrando resultados para:
-              <span className="font-semibold">
-                {query && ` "${query}"`}
-                {selectedTags.length > 0 && ` en ${selectedTags.join(", ")}`}
-              </span>
-            </p>
-          )}
+            {(query || selectedTags.length > 0) && (
+              <p className="text-lg mb-4">
+                Mostrando resultados para:
+                <span className="font-semibold">
+                  {query && ` "${query}"`}
+                  {selectedTags.length > 0 && ` en ${selectedTags.join(", ")}`}
+                </span>
+              </p>
+            )}
 
-          <p className="text-sm text-muted-foreground mb-4">{filteredPosts.length} resultados encontrados</p>
+            <p className="text-sm text-muted-foreground mb-4">{filteredPosts.length} resultados encontrados</p>
 
-          <AnimatePresence mode="wait">
-            <motion.div
-              key={page + query + selectedTags.join(",") + sortBy + sortOrder}
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -20 }}
-              transition={{ duration: 0.3 }}
-            >
-              <BlogList posts={currentPosts} isLoading={isLoading} />
-            </motion.div>
-          </AnimatePresence>
+            <AnimatePresence mode="wait">
+              <motion.div
+                key={page + query + selectedTags.join(",") + sortBy + sortOrder}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -20 }}
+                transition={{ duration: 0.3 }}
+              >
+                <BlogList posts={currentPosts} isLoading={isLoading} />
+              </motion.div>
+            </AnimatePresence>
 
-          {filteredPosts.length > POSTS_PER_PAGE && (
-            <Pagination currentPage={page} totalPages={totalPages} onPageChange={handlePageChange} className="mt-8" />
-          )}
+            {filteredPosts.length > POSTS_PER_PAGE && (
+              <Pagination currentPage={page} totalPages={totalPages} onPageChange={handlePageChange} className="mt-8" />
+            )}
 
-          {!isLoading && filteredPosts.length === 0 && (
-            <p className="text-center text-lg text-muted-foreground mt-8">
-              No se encontraron resultados para tu búsqueda.
-            </p>
-          )}
-        </main>
-        <aside className="w-full lg:w-1/3">
-          <div className="lg lg:top-24">
-            <Sidebar />
-          </div>
-        </aside>
+            {!isLoading && filteredPosts.length === 0 && (
+              <p className="text-center text-lg text-muted-foreground mt-8">
+                No se encontraron resultados para tu búsqueda.
+              </p>
+            )}
+          </main>
+          <aside className="w-full lg:w-1/3">
+            <div className="lg lg:top-24">
+              <Sidebar />
+            </div>
+          </aside>
+        </div>
       </div>
     </div>
   )

@@ -93,7 +93,7 @@ export function ShareMenu({ url, title }: ShareMenuProps) {
       </Button>
 
       <Dialog open={isOpen} onOpenChange={setIsOpen}>
-        <DialogContent className="sm:max-w-md max-w-[calc(100%-2rem)] p-6 bg-gradient-to-br from-background to-background/95">
+        <DialogContent className="sm:max-w-md max-w-[calc(100%-2rem)] p-6 bg-secondary">
           <DialogHeader>
             <DialogTitle className="text-center text-2xl font-bold">Compartir artículo</DialogTitle>
           </DialogHeader>

@@ -81,7 +81,7 @@ const CommentItem: React.FC<CommentItemProps> = React.memo(
             <AvatarFallback>{comment.author.name[0]}</AvatarFallback>
           </Avatar>
           <div className="flex-grow">
-            <div className="bg-secondary p-4 rounded-lg shadow-sm">
+            <div className="bg-gradient-to-br from-accent/80 to-secondary/50 p-4 rounded-lg shadow-sm ">
               <div className="flex items-center justify-between mb-2">
                 <p className="font-semibold">{comment.author.name}</p>
                 <div className="flex items-center space-x-2">
@@ -127,7 +127,7 @@ const CommentItem: React.FC<CommentItemProps> = React.memo(
                 <Textarea
                   ref={replyInputRef}
                   placeholder="Escribe tu respuesta..."
-                  className="mb-2 min-h-[80px] resize-none"
+                  className="mb-2 min-h-[80px] resize-none bg-gradient-to-br from-accent/30 to-secondary/20 rounded-lg shadow-sm"
                   value={replyContent}
                   onChange={(e) => onReplyContentChange(e.target.value)}
                 />
@@ -222,7 +222,7 @@ export const Comments: React.FC<CommentsProps> = ({ comments: initialComments })
                 placeholder="Escribe un comentario..."
                 value={newComment}
                 onChange={(e) => setNewComment(e.target.value)}
-                className="mb-2 min-h-[100px] resize-none"
+                className="mb-2 min-h-[100px] resize-none bg-gradient-to-br from-accent/40 to-secondary/20  rounded-lg shadow-sm"
               />
               <div className="flex justify-between items-center">
                 <Button onClick={handleNewComment} className="transition-all duration-200 ease-in-out hover:shadow-md">

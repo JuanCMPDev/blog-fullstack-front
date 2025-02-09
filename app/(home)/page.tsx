@@ -41,7 +41,7 @@ export default function Home() {
   }
 
   return (
-    <>
+    <div className="bg-dot-pattern">
       <Hero />
       <div className="container mx-auto px-4 py-8">
         <div className="flex flex-col lg:flex-row gap-8">
@@ -81,7 +81,7 @@ export default function Home() {
           </aside>
         </div>
       </div>
-    </>
+    </div>
   )
 }
 
