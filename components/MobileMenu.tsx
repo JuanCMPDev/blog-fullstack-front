@@ -6,29 +6,31 @@ import { useRouter } from "next/navigation"
 import { Sheet, SheetContent, SheetTrigger, SheetClose, SheetTitle } from "@/components/ui/sheet"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Menu, Search, Sun, Moon, UserCircle, Settings, LogOut, Home, Dumbbell, Mail, X } from "lucide-react"
+import {
+  Menu,
+  Search,
+  Sun,
+  Moon,
+  UserCircle,
+  Settings,
+  LogOut,
+  Home,
+  Dumbbell,
+  Mail,
+  X,
+  LayoutDashboard,
+} from "lucide-react"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { motion } from "framer-motion"
 import { useAuth } from "@/lib/auth"
-
-interface NavItem {
-  id: string
-  label: string
-  href: string
-  icon: React.ElementType
-}
+import type React from "react" // Added import for React
+import { MobileMenuProps, NavItem } from "@/lib/types"
 
 const NavbarLinks: NavItem[] = [
   { id: "home", label: "Inicio", href: "/", icon: Home },
-  { id: "exercises", label: "Ejercicios", href: "/exercises", icon: Dumbbell },
+  { id: "exercises", label: "Ejercicios", href: "/ejercicios", icon: Dumbbell },
   { id: "contact", label: "Contacto", href: "/contacto", icon: Mail },
 ]
-
-interface MobileMenuProps {
-  theme: string | undefined
-  setTheme: (theme: string) => void
-  user: { name: string; email: string; image?: string; nick: string } | null
-}
 
 export function MobileMenu({ theme, setTheme, user }: MobileMenuProps) {
   const [open, setOpen] = useState(false)
@@ -87,7 +89,7 @@ export function MobileMenu({ theme, setTheme, user }: MobileMenuProps) {
             {user ? (
               <div className="flex items-center space-x-3 mb-4">
                 <Avatar className="h-10 w-10 border-2 border-primary">
-                  <AvatarImage src={user.image || "/placeholder-user.jpg"} alt={user.name} />
+                  <AvatarImage src={user.avatar || "/placeholder-user.jpg"} alt={user.name} />
                   <AvatarFallback className="bg-gradient-to-br from-primary to-secondary text-primary-foreground">
                     {user.name.charAt(0)}
                   </AvatarFallback>
@@ -137,6 +139,17 @@ export function MobileMenu({ theme, setTheme, user }: MobileMenuProps) {
                     </Link>
                   </SheetClose>
                 ))}
+                {(user.role === "admin" || user.role === "editor") && (
+                  <SheetClose asChild>
+                    <Link
+                      href="/admin"
+                      className="flex items-center text-lg font-medium hover:text-primary transition-colors py-3 border-b border-border"
+                    >
+                      <LayoutDashboard className="mr-3 h-5 w-5" />
+                      <span>Dashboard</span>
+                    </Link>
+                  </SheetClose>
+                )}
               </>
             )}
           </nav>

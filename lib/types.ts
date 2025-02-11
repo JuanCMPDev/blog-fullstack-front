@@ -4,7 +4,7 @@ import { z } from "zod"
 export enum UserRole {
   Admin = "admin",
   User = "user",
-  Moderator = "moderator",
+  Editor = "editor",
 }
 
 export enum FontSize {
@@ -67,6 +67,13 @@ export interface Comment {
   createdAt: string
 }
 
+export interface NavItem {
+  id: string
+  label: string
+  href: string
+  icon: React.ElementType
+}
+
 // Props de componentes
 export type UserAvatarProps = Pick<BaseUser, "name" | "avatar">
 
@@ -75,7 +82,7 @@ export interface UserMenuProps {
 }
 
 export interface MobileMenuProps {
-  theme: string | null
+  theme: string | undefined
   setTheme: (theme: string) => void
   user: User | null
 }
@@ -104,11 +111,18 @@ export interface SidebarProps {
   recommendedPosts?: Post[]
 }
 
+export interface ProtectedRouteProps {
+  children: React.ReactNode
+  allowedRoles: string[]
+}
+
 // Estado y hooks
 export interface AuthState {
   user: User | null
+  isLoading: boolean
   setUser: (user: User | null) => void
   isAdmin: () => boolean
+  isEditor: () => boolean
   logout: () => void
 }
 

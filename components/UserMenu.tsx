@@ -1,10 +1,19 @@
 import { useState, useRef, useEffect } from "react"
 import Link from "next/link"
 import { motion, AnimatePresence } from "framer-motion"
-import { UserCircle, Settings, LogOut } from "lucide-react"
+import { UserCircle, Settings, LogOut, LayoutDashboard } from "lucide-react"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { useAuth } from "@/lib/auth"
-import { UserMenuProps } from "@/lib/types"
+
+interface UserMenuProps {
+  user: {
+    name: string
+    email: string
+    image?: string
+    nick: string
+    role: string
+  }
+}
 
 export function UserMenu({ user }: UserMenuProps) {
   const [isOpen, setIsOpen] = useState(false)
@@ -24,18 +33,12 @@ export function UserMenu({ user }: UserMenuProps) {
     }
   }, [])
 
-  const handleMenuAction = () => {
-    setIsOpen(false)
-  }
-
-  const handleLogout = () => {
-    logout()
-    setIsOpen(false)
-  }
-
   const menuItems = [
     { icon: UserCircle, label: "Perfil", href: `/profile/${user.nick}` },
     { icon: Settings, label: "Configuración", href: "/settings" },
+    ...(user.role === "admin" || user.role === "editor"
+      ? [{ icon: LayoutDashboard, label: "Dashboard", href: "/admin" }]
+      : []),
   ]
 
   return (
@@ -45,7 +48,7 @@ export function UserMenu({ user }: UserMenuProps) {
         onClick={() => setIsOpen(!isOpen)}
       >
         <Avatar className="h-full w-full">
-          <AvatarImage src={user.avatar || "/placeholder-user.jpg"} alt={user.name} />
+          <AvatarImage src={user.image || "/placeholder-user.jpg"} alt={user.name} />
           <AvatarFallback className="bg-gradient-to-br from-primary to-secondary text-primary-foreground">
             {user.name.charAt(0)}
           </AvatarFallback>
@@ -73,7 +76,6 @@ export function UserMenu({ user }: UserMenuProps) {
                 <Link
                   key={index}
                   href={item.href}
-                  onClick={handleMenuAction}
                   className="flex items-center px-4 py-3 text-sm text-foreground hover:bg-accent/50 transition-colors duration-150 group"
                 >
                   <span className="flex items-center justify-center w-8 h-8 rounded-full bg-primary/10 group-hover:bg-primary/20 mr-3 transition-colors duration-150">
@@ -85,7 +87,7 @@ export function UserMenu({ user }: UserMenuProps) {
             </div>
             <div className="py-2 bg-gradient-to-r from-destructive/10 to-destructive/20 backdrop-blur-sm">
               <button
-                onClick={handleLogout}
+                onClick={logout}
                 className="flex w-full items-center px-4 py-3 text-sm text-foreground hover:bg-destructive/20 transition-colors duration-150 group"
               >
                 <span className="flex items-center justify-center w-8 h-8 rounded-full bg-destructive/10 group-hover:bg-destructive/30 mr-3 transition-colors duration-150">
@@ -100,3 +102,4 @@ export function UserMenu({ user }: UserMenuProps) {
     </div>
   )
 }
+

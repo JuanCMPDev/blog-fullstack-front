@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useMemo } from "react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { motion } from "framer-motion"
@@ -23,6 +23,7 @@ import {
   type LucideIcon,
 } from "lucide-react"
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible"
+import { useAuth } from "@/lib/auth"
 
 interface NavItem {
   title: string
@@ -31,36 +32,44 @@ interface NavItem {
   subItems?: NavItem[]
 }
 
-const sidebarNavItems: NavItem[] = [
-  {
-    title: "Dashboard",
-    href: "/admin",
-    icon: Dashboard,
-  },
-  {
-    title: "Usuarios",
-    icon: Users,
-    subItems: [{ title: "Administrar Usuarios", href: "/admin/users", icon: UserPlus }],
-  },
-  {
-    title: "Posts",
-    icon: FileText,
-    subItems: [
-      { title: "Crear Post", href: "/admin/posts/create", icon: PenSquare },
-      { title: "Administrar Posts", href: "/admin/posts", icon: ListTodo },
-    ],
-  },
-]
-
 export function AdminSidebar() {
   const pathname = usePathname()
   const [mounted, setMounted] = useState(false)
   const { theme, setTheme } = useTheme()
   const [openItems, setOpenItems] = useState<string[]>([])
+  const { user } = useAuth()
 
   useEffect(() => {
     setMounted(true)
   }, [])
+
+  const sidebarNavItems: NavItem[] = useMemo(
+    () => [
+      {
+        title: "Dashboard",
+        href: "/admin",
+        icon: Dashboard,
+      },
+      ...(user?.role === "admin"
+        ? [
+            {
+              title: "Usuarios",
+              icon: Users,
+              subItems: [{ title: "Administrar Usuarios", href: "/admin/users", icon: UserPlus }],
+            },
+          ]
+        : []),
+      {
+        title: "Posts",
+        icon: FileText,
+        subItems: [
+          { title: "Crear Post", href: "/admin/posts/create", icon: PenSquare },
+          { title: "Administrar Posts", href: "/admin/posts", icon: ListTodo },
+        ],
+      },
+    ],
+    [user?.role],
+  )
 
   if (!mounted) {
     return null
@@ -129,7 +138,7 @@ export function AdminSidebar() {
       className="hidden lg:flex h-screen w-64 flex-col bg-background border-r"
     >
       <div className="flex h-16 items-center justify-center bg-accent/50">
-        <Link href="/" className="flex items-center space-x-2">
+        <Link href="/admin" className="flex items-center space-x-2">
           <div className="w-6 h-6 bg-primary rounded-full flex items-center justify-center">
             <span className="text-sm font-bold text-primary-foreground">A</span>
           </div>

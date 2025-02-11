@@ -151,7 +151,7 @@ export default function PostPage() {
             <p className="font-semibold">{post.author.name}</p>
             <div className="flex items-center text-sm text-muted-foreground">
               <Calendar className="mr-2 h-4 w-4" />
-              <span>{format(new Date(post.publishDate), "dd MMMM, yyyy", { locale: es })}</span>
+              <span>{format(new Date(post.publishDate as string), "dd MMMM, yyyy", { locale: es })}</span>
               <span className="mx-2">•</span>
               <Clock className="mr-2 h-4 w-4" />
               <span>{post.readTime} min de lectura</span>
@@ -164,7 +164,7 @@ export default function PostPage() {
           ))}
         </div>
         <div className="prose prose-lg dark:prose-invert max-w-none mb-8">{renderContent(post.content)}</div>
-        <div className="flex items-center justify-between border-t border-b py-4 mb-8">
+        <div className="flex items-center justify-between border-t border-b py-4 mb-8 bg-background/90">
           <div className="flex items-center space-x-2 sm:space-x-4">
             <Button variant="ghost" size="sm" className="text-xs sm:text-sm px-2 sm:px-3" onClick={handleLike}>
               <ThumbsUp className="h-4 w-4 mr-1 sm:mr-2" />

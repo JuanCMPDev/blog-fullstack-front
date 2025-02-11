@@ -1,20 +1,19 @@
 "use client"
 
 import { useState } from "react"
+import { useRouter } from "next/navigation"
 import { motion } from "framer-motion"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import * as z from "zod"
 import Link from "next/link"
-import { Loader2, Mail, Lock } from "lucide-react"
+import { Loader2, Mail, Lock, Eye, EyeOff } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form"
 import { Input } from "@/components/ui/input"
 import { useToast } from "@/hooks/use-toast"
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
-import { useAuth } from "@/lib/auth"
-import { User, UserRole } from "@/lib/types"
-import { useRouter} from 'next/navigation'
+import { fetchCurrentUser } from "@/lib/auth"
 
 const formSchema = z.object({
   email: z.string().email({
@@ -27,10 +26,9 @@ const formSchema = z.object({
 
 export default function SignIn() {
   const [isLoading, setIsLoading] = useState(false)
+  const [showPassword, setShowPassword] = useState(false)
   const { toast } = useToast()
-  const setUser = useAuth((state) => state.setUser)
   const router = useRouter()
-
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -39,33 +37,31 @@ export default function SignIn() {
       password: "",
     },
   })
-  async function onSubmit(data: z.infer<typeof formSchema>) {
+
+  async function onSubmit() {
     setIsLoading(true)
-    // Simula una llamada a la API con un tiempo de espera
-    setTimeout(() => {
-      setIsLoading(false)
+    try {
+      // Simulate API call
+      await new Promise((resolve) => setTimeout(resolve, 2000))
 
-      // Simula la respuesta de la API
-      const fakeUser: User = {
-        id: "123",
-        nick: "jcdev",
-        name: "Juan Carlos Dev",
-        email: data.email,
-        role: "admin" as UserRole,
-        avatar: "/placeholder.svg?height=40&width=40",
-      }
 
-      setUser(fakeUser)
+      fetchCurrentUser()
 
       toast({
         title: "Inicio de sesión exitoso",
-        description: `Bienvenido de vuelta, ${fakeUser.name}!`,
+        description: "Bienvenido de vuelta a JCDevBlog!",
       })
 
-      // Redirige a la página de inicio
       router.push("/")
-     
-    }, 2000)
+    } catch {
+      toast({
+        title: "Error de inicio de sesión",
+        description: "Hubo un problema al iniciar sesión. Por favor, inténtalo de nuevo.",
+        variant: "destructive",
+      })
+    } finally {
+      setIsLoading(false)
+    }
   }
 
   return (
@@ -107,8 +103,26 @@ export default function SignIn() {
                       <FormLabel>Contraseña</FormLabel>
                       <FormControl>
                         <div className="relative">
-                          <Input type="password" placeholder="********" {...field} className="pl-10" />
+                          <Input
+                            type={showPassword ? "text" : "password"}
+                            placeholder="********"
+                            {...field}
+                            className="pl-10 pr-10"
+                          />
                           <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            className="absolute right-1 top-1/2 transform -translate-y-1/2 h-8 w-8 p-0"
+                            onClick={() => setShowPassword(!showPassword)}
+                          >
+                            {showPassword ? (
+                              <EyeOff className="h-4 w-4 text-muted-foreground" />
+                            ) : (
+                              <Eye className="h-4 w-4 text-muted-foreground" />
+                            )}
+                          </Button>
                         </div>
                       </FormControl>
                       <FormMessage />
