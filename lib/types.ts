@@ -119,11 +119,14 @@ export interface ProtectedRouteProps {
 // Estado y hooks
 export interface AuthState {
   user: User | null
+  accessToken: string | null
   isLoading: boolean
   setUser: (user: User | null) => void
+  login: (email: string, password: string) => Promise<void>
+  refreshAccessToken: () => Promise<void>
+  logout: () => Promise<void>
   isAdmin: () => boolean
   isEditor: () => boolean
-  logout: () => void
 }
 
 export interface UseCommentsReturn {

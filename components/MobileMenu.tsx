@@ -51,6 +51,10 @@ export function MobileMenu({ theme, setTheme, user }: MobileMenuProps) {
     { icon: Settings, label: "Configuración", href: "/settings" },
   ]
 
+  console.log("user.role === admin:", user?.role === "admin");
+
+  console.log("User en Header:", user);
+
   return (
     <Sheet open={open} onOpenChange={setOpen}>
       <SheetTrigger asChild>

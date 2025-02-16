@@ -18,11 +18,14 @@ export function Header() {
   const [scrolled, setScrolled] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const pathname = usePathname();
-  const { user } = useAuth();
+  const { user } = useAuth(); // Estado global del usuario
   const router = useRouter();
 
+  console.log("user:", user?.role)
+  
   useEffect(() => {
     setMounted(true);
+    
     const handleScroll = () => {
       setScrolled(window.scrollY > 10);
     };
@@ -39,13 +42,12 @@ export function Header() {
     }
   };
 
-  // Render a placeholder during SSR
   if (!mounted) {
     return (
       <header className="h-16">
         <div className="container mx-auto px-4">
           <div className="flex items-center justify-between h-16">
-            {/* Placeholder content */}
+            {/* Placeholder */}
           </div>
         </div>
       </header>
@@ -79,15 +81,12 @@ export function Header() {
 
           <nav className="hidden md:flex items-center space-x-6">
             {["Inicio", "Ejercicios", "Contacto"].map((item) => {
-              // Mapeo personalizado de nombres a rutas
               const routeMap = {
                 Inicio: "/",
                 Ejercicios: "/exercises",
                 Contacto: "/contact",
               };
-
               const route = routeMap[item as keyof typeof routeMap];
-
               return (
                 <Link
                   key={item}

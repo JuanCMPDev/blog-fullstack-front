@@ -1,25 +1,21 @@
-"use client"
+"use client";
 
-import { type ReactNode, useEffect } from "react"
-import { useAuth, fetchCurrentUser } from "@/lib/auth"
+import { ReactNode, useEffect } from "react";
+import { useAuth } from "@/lib/auth";
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const { setUser } = useAuth()
+  const refreshAccessToken = useAuth((state) => state.refreshAccessToken);
+  const accessToken = useAuth((state) => state.accessToken);
 
   useEffect(() => {
-    const loadUser = async () => {
-      try {
-        const user = await fetchCurrentUser()
-        setUser(user)
-      } catch (error) {
-        console.error("Failed to load user:", error)
-        setUser(null)
+    // Refrescar el token cada 15 minutos, solo si hay un accessToken válido
+    const interval = setInterval(() => {
+      if (accessToken) {
+        refreshAccessToken();
       }
-    }
+    }, 15 * 60 * 1000); // 15 minutos
+    return () => clearInterval(interval);
+  }, [refreshAccessToken, accessToken]);
 
-    loadUser()
-  }, [setUser])
-
-  return <>{children}</>
+  return <>{children}</>;
 }
-

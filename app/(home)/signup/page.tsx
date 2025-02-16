@@ -13,40 +13,42 @@ import { Input } from "@/components/ui/input"
 import { useToast } from "@/hooks/use-toast"
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Progress } from "@/components/ui/progress"
+import { useRouter } from "next/navigation"
 
 const passwordStrengthColor = ["bg-red-500", "bg-orange-500", "bg-yellow-500", "bg-lime-500", "bg-green-500"]
 
+
 const formSchema = z
-  .object({
-    name: z.string().min(2, {
-      message: "El nombre debe tener al menos 2 caracteres.",
-    }),
-    nick: z
-      .string()
-      .min(3, {
-        message: "El nick debe tener al menos 3 caracteres.",
-      })
-      .regex(/^[a-zA-Z0-9_]+$/, {
-        message: "El nick solo puede contener letras, números y guiones bajos.",
-      }),
-    email: z.string().email({
-      message: "Por favor, introduce un email válido.",
-    }),
-    password: z
-      .string()
-      .min(8, {
-        message: "La contraseña debe tener al menos 8 caracteres.",
-      })
-      .regex(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/, {
-        message:
-          "La contraseña debe contener al menos una letra mayúscula, una minúscula, un número y un carácter especial.",
-      }),
-    confirmPassword: z.string(),
+.object({
+  name: z.string().min(2, {
+    message: "El nombre debe tener al menos 2 caracteres.",
+  }),
+  nick: z
+  .string()
+  .min(3, {
+    message: "El nick debe tener al menos 3 caracteres.",
   })
-  .refine((data) => data.password === data.confirmPassword, {
-    message: "Las contraseñas no coinciden.",
-    path: ["confirmPassword"],
+  .regex(/^[a-zA-Z0-9_]+$/, {
+    message: "El nick solo puede contener letras, números y guiones bajos.",
+  }),
+  email: z.string().email({
+    message: "Por favor, introduce un email válido.",
+  }),
+  password: z
+  .string()
+  .min(8, {
+    message: "La contraseña debe tener al menos 8 caracteres.",
   })
+  .regex(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[\W_]).*$/, {
+    message:
+    "La contraseña debe contener al menos una letra mayúscula, una minúscula, un número y un carácter especial.",
+  }),
+  confirmPassword: z.string(),
+})
+.refine((data) => data.password === data.confirmPassword, {
+  message: "Las contraseñas no coinciden.",
+  path: ["confirmPassword"],
+})
 
 export default function SignUp() {
   const [isLoading, setIsLoading] = useState(false)
@@ -54,7 +56,8 @@ export default function SignUp() {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
   const [passwordStrength, setPasswordStrength] = useState(0)
   const { toast } = useToast()
-
+  const router = useRouter()
+  
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -83,16 +86,35 @@ export default function SignUp() {
     return strength
   }
 
-  function onSubmit() {
+  async function onSubmit(data: z.infer<typeof formSchema>) {
     setIsLoading(true)
-    // Simulate API call
-    setTimeout(() => {
-      setIsLoading(false)
-      toast({
-        title: "Registro exitoso",
-        description: "¡Bienvenido a JCDevBlog!",
+    try {
+      console.log(data)
+      const res = await fetch(process.env.NEXT_PUBLIC_API_URL + "auth/register", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(data),
       })
-    }, 2000)
+      if (!res.ok) {
+        const { message } = await res.json()
+        throw new Error(message)
+      }
+      toast({
+        title: "Cuenta creada",
+        description: "Tu cuenta ha sido creada con éxito. Ahora puedes iniciar sesión.",
+      })
+      router.push("/signin")
+    } catch (error: unknown) {
+      toast({
+        title: "Error al crear la cuenta",
+        description: (error as Error).message,
+        variant: "destructive",
+      })
+    } finally {
+      setIsLoading(false)
+    }
   }
 
   return (

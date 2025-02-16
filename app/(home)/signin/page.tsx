@@ -12,8 +12,8 @@ import { Button } from "@/components/ui/button"
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form"
 import { Input } from "@/components/ui/input"
 import { useToast } from "@/hooks/use-toast"
-import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
-import { fetchCurrentUser } from "@/lib/auth"
+import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/components/ui/card"
+import { useAuth } from "@/lib/auth"
 
 const formSchema = z.object({
   email: z.string().email({
@@ -29,6 +29,7 @@ export default function SignIn() {
   const [showPassword, setShowPassword] = useState(false)
   const { toast } = useToast()
   const router = useRouter()
+  const { login } = useAuth()
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -38,25 +39,17 @@ export default function SignIn() {
     },
   })
 
-  async function onSubmit() {
+  async function onSubmit(values: z.infer<typeof formSchema>) {
     setIsLoading(true)
     try {
-      // Simulate API call
-      await new Promise((resolve) => setTimeout(resolve, 2000))
-
-
-      fetchCurrentUser()
-
-      toast({
-        title: "Inicio de sesión exitoso",
-        description: "Bienvenido de vuelta a JCDevBlog!",
-      })
-
+      // Se utiliza el método login del store, que se encarga de la llamada a la API
+      await login(values.email, values.password)
+      // Luego de iniciar sesión, redirige a la ruta deseada (por ejemplo, dashboard)
       router.push("/")
-    } catch {
+    } catch (error: unknown) {
       toast({
         title: "Error de inicio de sesión",
-        description: "Hubo un problema al iniciar sesión. Por favor, inténtalo de nuevo.",
+        description: (error as Error).message,
         variant: "destructive",
       })
     } finally {
@@ -74,11 +67,13 @@ export default function SignIn() {
       >
         <Card className="border-none shadow-lg bg-background/80 backdrop-blur-sm">
           <CardHeader>
-            <CardTitle className="text-2xl font-bold text-center">Inicia sesión en tu cuenta</CardTitle>
+            <CardTitle className="text-2xl font-bold text-center">
+              Inicia sesión en tu cuenta
+            </CardTitle>
           </CardHeader>
-          <CardContent>
+          <CardContent className="px-6 py-4">
             <Form {...form}>
-              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
                 <FormField
                   control={form.control}
                   name="email"
@@ -126,6 +121,15 @@ export default function SignIn() {
                         </div>
                       </FormControl>
                       <FormMessage />
+                      <div className="text-right">
+                        <Link
+                          href="/reset-password"
+                          className="text-xs text-muted-foreground hover:text-primary transition-colors"
+                          aria-label="Recuperar contraseña olvidada"
+                        >
+                          ¿Olvidaste tu contraseña?
+                        </Link>
+                      </div>
                     </FormItem>
                   )}
                 />
@@ -136,7 +140,7 @@ export default function SignIn() {
               </form>
             </Form>
           </CardContent>
-          <CardFooter className="flex justify-center">
+          <CardFooter className="flex flex-col items-center space-y-4">
             <p className="text-sm text-muted-foreground">
               ¿No tienes una cuenta?{" "}
               <Link href="/signup" className="font-medium text-primary hover:underline">
@@ -149,4 +153,3 @@ export default function SignIn() {
     </div>
   )
 }
-
