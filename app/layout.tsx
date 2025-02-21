@@ -5,7 +5,12 @@ import { ThemeProvider } from '@/components/theme-provider'
 import { Toaster } from '@/components/ui/toaster'
 import { AuthProvider } from "@/components/AuthProvider"
 
-const inter = Inter({ subsets: ['latin'] })
+const inter = Inter({
+  subsets: ['latin'],
+  display: 'swap',
+  weight: ['100', '400', '700'],
+  preload: true,
+})
 
 export const metadata: Metadata = {
   title: 'JCDevBlog',

@@ -1,6 +1,8 @@
+// (home)/profile/[nick]
 "use client"
 
 import { useState } from "react"
+import { useParams, useSearchParams } from "next/navigation" // Assuming you're using Zustand for global state
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -11,7 +13,6 @@ import {
   Github,
   Twitter,
   Linkedin,
-  Mail,
   MapPin,
   Calendar,
   Bookmark,
@@ -24,11 +25,26 @@ import Link from "next/link"
 import { EditProfileForm } from "@/components/EditProfileForm"
 import { useProfile } from "@/hooks/use-profile"
 import { ProfileSkeleton } from "@/components/ProfileSkeleton"
-import { useSearchParams } from "next/navigation"
+import { AvatarEdit } from "@/components/AvatarEdit"
+import { CoverImageEdit } from "@/components/CoverImageEdit"
+import { useAuth } from "@/lib/auth"
+import { format, parseISO } from "date-fns"
+import { es } from "date-fns/locale"
 
 export default function ProfilePage() {
-  const { profile, savedPosts, isLoading, error, updateProfile } = useProfile()
+  const params = useParams()
+  const userNick = typeof params?.nick === "string" ? params.nick : undefined
+  const { profile, savedPosts, isLoading, error, updateProfile, updateAvatar, updateCoverImage } = useProfile(userNick)
+  const { accessToken } = useAuth()
   const [isEditing, setIsEditing] = useState(false)
+  const [selectedAvatar, setSelectedAvatar] = useState<File | null>(null)
+  const [selectedCoverImage, setSelectedCoverImage] = useState<File | null>(null)
+
+  // Get the current user's nick from the global Zustand store
+  const currentUserNick: string | undefined = useAuth((state) => state.user?.nick)
+
+  // Check if the profile can be edited
+  const canEdit = userNick === currentUserNick
 
   const searchParams = useSearchParams()
   const defaultTab = searchParams.get("tab") === "activity" ? "activity" : "saved"
@@ -44,6 +60,43 @@ export default function ProfilePage() {
     setIsEditing(false)
   }
 
+  const handleAvatarChange = (newAvatar: File) => {
+    setSelectedAvatar(newAvatar) // 🔵 Almacena el archivo en el estado temporal
+  }
+
+  const handleAvatarUpdate = async () => {
+    if (!selectedAvatar) return
+
+    try {
+      if (!accessToken) {
+        return
+      }
+      await updateAvatar(selectedAvatar) // Asumiendo que updateAvatar maneja la subida
+      setSelectedAvatar(null) // Limpiar el estado
+    } catch (error) {
+      console.error("Error al actualizar el avatar:", error)
+    }
+  }
+
+  const handleCoverImageChange = (newCoverImage: File) => {
+    setSelectedCoverImage(newCoverImage)
+  }
+
+  const handleCoverImageUpdate = async () => {
+    if (!selectedCoverImage) return
+
+    try {
+      if (!accessToken) {
+        return
+      }
+      console.log(selectedCoverImage)
+
+      await updateCoverImage(selectedCoverImage)
+      setSelectedCoverImage(null)
+    } catch (err) {
+      console.error("error al actualizar el cover image", err)
+    }
+  }
   const recentActivities = [
     { type: "like", content: 'Le gustó el post "Introducción a React Hooks"', date: "2023-07-20", icon: Heart },
     {
@@ -66,28 +119,44 @@ export default function ProfilePage() {
     <div className="min-h-screen bg-dot-pattern">
       <div className="container mx-auto px-4 py-8 max-w-5xl">
         <Card className="mb-8 overflow-hidden shadow-lg">
-          <div className="relative h-32 sm:h-48 md:h-64">
+          <div className="relative group h-36 sm:h-48 md:h-64">
+            {" "}
+            {/* Adjusted height */}
             <Image src={profile.coverImage || "/placeholder.svg"} alt="Cover" layout="fill" objectFit="cover" />
-            <div className="absolute inset-0 bg-gradient-to-t from-background to-transparent"></div>
+            {canEdit && <CoverImageEdit
+              currentCoverImage={profile.coverImage}
+              onChange={(newCoverImage) => handleCoverImageChange(newCoverImage)}
+              handleCoverImageUpdate={handleCoverImageUpdate}
+            />}
           </div>
-          <CardContent className="relative px-4 md:px-6">
-            <div className="flex flex-col sm:flex-row items-center sm:items-end -mt-16 sm:-mt-20 md:-mt-24 relative z-10 px-4 sm:px-6">
-              <Avatar className="w-24 h-24 sm:w-32 sm:h-32 border-4 border-background">
-                <AvatarImage src={profile.avatar} alt={profile.name} />
-                <AvatarFallback>{profile.name.charAt(0)}</AvatarFallback>
-              </Avatar>
-              <div className="mt-4 sm:mt-0 sm:ml-6 text-center sm:text-left">
-                <h1 className="text-2xl sm:text-3xl font-bold text-foreground">{profile.name}</h1>
-                <p className="text-sm sm:text-base text-muted-foreground">{profile.email}</p>
+          <CardContent className="relative px-4 md:px-6 pt-8">
+            <div className="flex flex-col sm:flex-row items-center sm:items-end -mt-18 sm:-mt-24 md:-mt-28 relative z-10 px-4 sm:px-6">
+              {" "}
+              {/* Adjusted margin top */}
+              <div className="relative group">
+                <Avatar className="w-24 h-24 sm:w-32 sm:h-32 border-4 border-background">
+                  <AvatarImage src={profile.avatar} alt={profile.name} />
+                  <AvatarFallback>{profile.name.charAt(0)}</AvatarFallback>
+                </Avatar>
+                {canEdit && <AvatarEdit
+                  currentAvatar={profile.avatar}
+                  onAvatarChange={(newAvatar) => handleAvatarChange(newAvatar)}
+                  handleAvatarUpdate={handleAvatarUpdate}
+                />}
               </div>
-              {!isEditing && (
+              <div className="mt-8 sm:mt-4 sm:ml-6 text-center sm:text-left">
+                {" "}
+                {/* Added margin top */}
+                <h1 className="text-2xl sm:text-3xl font-bold text-foreground">{profile.name}</h1>
+              </div>
+              {canEdit && !isEditing && (
                 <Button onClick={handleEdit} variant="outline" size="sm" className="mt-4 sm:mt-0 sm:ml-auto">
                   <Pencil className="w-4 h-4 mr-2" />
                   Editar Perfil
                 </Button>
               )}
             </div>
-            {isEditing ? (
+            {canEdit && isEditing ? (
               <div className="mt-8 sm:mt-12">
                 <EditProfileForm profile={profile} onSave={handleSave} onCancel={handleCancel} />
               </div>
@@ -100,7 +169,7 @@ export default function ProfilePage() {
                   </div>
                   <div className="flex items-center text-muted-foreground">
                     <Calendar className="w-4 h-4 mr-2 text-muted-foreground" />
-                    Se unió en {profile.joinDate}
+                    Se unió el {format(parseISO(profile.joinDate), "d 'de' MMMM 'de' yyyy", { locale: es })}
                   </div>
                   <div className="flex items-center space-x-4">
                     {profile.socialLinks.github && (
@@ -130,9 +199,6 @@ export default function ProfilePage() {
                         <Linkedin className="w-5 h-5 text-muted-foreground hover:text-primary transition-colors" />
                       </Link>
                     )}
-                    <Link href={`mailto:${profile.email}`}>
-                      <Mail className="w-5 h-5 text-muted-foreground hover:text-primary transition-colors" />
-                    </Link>
                   </div>
                 </div>
                 <div className="mt-8">
@@ -143,10 +209,7 @@ export default function ProfilePage() {
                   <h2 className="text-xl font-semibold mb-2 text-foreground/80">Habilidades</h2>
                   <div className="flex flex-wrap gap-2">
                     {profile.skills.map((skill) => (
-                      <Badge
-                        key={skill}
-                        variant="secondary"
-                      >
+                      <Badge key={skill} variant="secondary">
                         {skill}
                       </Badge>
                     ))}
@@ -158,7 +221,7 @@ export default function ProfilePage() {
         </Card>
 
         <div className="gap-6">
-          <Card >
+          <Card>
             <CardHeader>
               <CardTitle className="text-primary">Actividad</CardTitle>
             </CardHeader>

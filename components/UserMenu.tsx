@@ -9,7 +9,7 @@ interface UserMenuProps {
   user: {
     name: string
     email: string
-    image?: string
+    avatar?: string
     nick: string
     role: string
   }
@@ -48,7 +48,7 @@ export function UserMenu({ user }: UserMenuProps) {
         onClick={() => setIsOpen(!isOpen)}
       >
         <Avatar className="h-full w-full">
-          <AvatarImage src={user.image || "/placeholder-user.jpg"} alt={user.name} />
+          <AvatarImage src={user.avatar || "/placeholder-user.jpg"} alt={user.name} />
           <AvatarFallback className="bg-gradient-to-br from-primary to-secondary text-primary-foreground">
             {user.name.charAt(0)}
           </AvatarFallback>

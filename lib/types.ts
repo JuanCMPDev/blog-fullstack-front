@@ -122,6 +122,7 @@ export interface AuthState {
   accessToken: string | null
   isLoading: boolean
   setUser: (user: User | null) => void
+  setAccessToken: (token: string | null) => void
   login: (email: string, password: string) => Promise<void>
   refreshAccessToken: () => Promise<void>
   logout: () => Promise<void>
@@ -145,7 +146,6 @@ export interface UseCommentsReturn {
 // Perfil del usuario
 export interface UserProfile {
   name: string
-  email: string
   bio: string
   avatar: string
   coverImage: string
@@ -157,11 +157,6 @@ export interface UserProfile {
     linkedin?: string
   }
   skills: string[]
-  stats: {
-    savedPosts: number
-    followers: number
-    following: number
-  }
 }
 
 export interface EditProfileFormProps {
@@ -175,7 +170,10 @@ export interface UseProfileReturn {
   savedPosts: Post[]
   isLoading: boolean
   error: string | null
-  updateProfile: (updatedProfile: UserProfile) => Promise<void>
+  updateProfile: (updatedProfile: UserProfile) => Promise<UserProfile | null>
+  updateAvatar: (newAvatar: File) => Promise<void>
+  updateCoverImage: (newCoverImage: File) => Promise<void>
+  fetchProfile: () => Promise<void>;
 }
 
 // Configuración de usuario

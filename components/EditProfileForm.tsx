@@ -1,5 +1,9 @@
+"use client"
+
+import type React from "react"
+
 import { useState } from "react"
-import { useForm, useFieldArray } from "react-hook-form"
+import { useForm, useFieldArray, type FieldArrayPath } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import * as z from "zod"
 import type { UserProfile } from "@/lib/types"
@@ -8,79 +12,70 @@ import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form"
 import { toast } from "@/hooks/use-toast"
-import { X, Plus, Upload } from "lucide-react"
-
-const MAX_FILE_SIZE = 5 * 1024 * 1024 // 5MB
-const ACCEPTED_IMAGE_TYPES = ["image/jpeg", "image/jpg", "image/png", "image/webp"]
+import { X, Plus } from "lucide-react"
+import { useProfile } from "@/hooks/use-profile"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { countries } from "@/lib/countries" // Assume this file contains the country data
 
 const profileFormSchema = z.object({
   name: z.string().min(2, {
     message: "El nombre debe tener al menos 2 caracteres.",
   }),
-  email: z.string().email({
-    message: "Por favor, introduce un email válido.",
-  }),
   bio: z.string().max(160, {
     message: "La biografía no puede tener más de 160 caracteres.",
   }),
-  location: z.string().min(2, {
-    message: "La ubicación debe tener al menos 2 caracteres.",
+  location: z.string({
+    required_error: "Por favor selecciona una ubicación.",
   }),
-  avatar: z
-    .any()
-    .refine((file) => file?.size <= MAX_FILE_SIZE, `El tamaño máximo es 5MB.`)
-    .refine((file) => ACCEPTED_IMAGE_TYPES.includes(file?.type), "Solo se aceptan archivos .jpg, .jpeg, .png y .webp.")
-    .optional(),
-  coverImage: z
-    .any()
-    .refine((file) => file?.size <= MAX_FILE_SIZE, `El tamaño máximo es 5MB.`)
-    .refine((file) => ACCEPTED_IMAGE_TYPES.includes(file?.type), "Solo se aceptan archivos .jpg, .jpeg, .png y .webp.")
-    .optional(),
   twitter: z.string().url({ message: "Introduce una URL válida." }).optional().or(z.literal("")),
   github: z.string().url({ message: "Introduce una URL válida." }).optional().or(z.literal("")),
   linkedin: z.string().url({ message: "Introduce una URL válida." }).optional().or(z.literal("")),
-  skills: z.array(z.string()).min(1, "Debes tener al menos una habilidad."),
+  skills: z.array(z.string()),
 })
 
 type ProfileFormValues = z.infer<typeof profileFormSchema>
 
 interface EditProfileFormProps {
-  profile: UserProfile
-  onSave: (updatedProfile: UserProfile) => void
   onCancel: () => void
 }
 
-export const EditProfileForm: React.FC<EditProfileFormProps> = ({ profile, onSave, onCancel }) => {
+export const EditProfileForm: React.FC<EditProfileFormProps> = ({ onCancel }) => {
+  const { profile, updateProfile, fetchProfile } = useProfile()
   const [isSaving, setIsSaving] = useState(false)
 
   const form = useForm<ProfileFormValues>({
     resolver: zodResolver(profileFormSchema),
     defaultValues: {
-      name: profile.name,
-      email: profile.email,
-      bio: profile.bio,
-      location: profile.location,
-      twitter: profile.socialLinks.twitter ? `https://twitter.com/${profile.socialLinks.twitter}` : "",
-      github: profile.socialLinks.github ? `https://github.com/${profile.socialLinks.github}` : "",
-      linkedin: profile.socialLinks.linkedin ? `https://linkedin.com/in/${profile.socialLinks.linkedin}` : "",
-      skills: profile.skills,
+      name: profile?.name || "",
+      bio: profile?.bio || "",
+      location: profile?.location || "",
+      twitter: profile?.socialLinks.twitter ? `https://twitter.com/${profile.socialLinks.twitter}` : "",
+      github: profile?.socialLinks.github ? `https://github.com/${profile.socialLinks.github}` : "",
+      linkedin: profile?.socialLinks.linkedin ? `https://linkedin.com/in/${profile.socialLinks.linkedin}` : "",
+      skills: profile?.skills || [],
     },
   })
 
-  const { fields, append, remove } = useFieldArray({
-    name: "skills",
+  const { fields, append, remove } = useFieldArray<ProfileFormValues>({
+    name: "skills" as FieldArrayPath<ProfileFormValues>,
     control: form.control,
   })
 
   const onSubmit = async (data: ProfileFormValues) => {
+    console.log("Form submission started", data)
+
     setIsSaving(true)
     try {
+      const selectedCountry: { code: string; name: string; emoji: string } | undefined = countries.find(
+        (country: { code: string; name: string; emoji: string }) => country.code === data.location
+      )
+      const locationString = selectedCountry ? `${selectedCountry.emoji} ${selectedCountry.name}` : data.location
+
       const updatedProfile: UserProfile = {
-        ...profile,
+        ...profile!,
         name: data.name,
-        email: data.email,
         bio: data.bio,
-        location: data.location,
+        location: locationString,
         socialLinks: {
           twitter: data.twitter ? new URL(data.twitter).pathname.split("/").pop() || "" : "",
           github: data.github ? new URL(data.github).pathname.split("/").pop() || "" : "",
@@ -89,21 +84,18 @@ export const EditProfileForm: React.FC<EditProfileFormProps> = ({ profile, onSav
         skills: data.skills,
       }
 
-      if (data.avatar) {
-        // En una aplicación real, aquí subirías la imagen a un servidor y obtendrías la URL
-        updatedProfile.avatar = URL.createObjectURL(data.avatar)
-      }
+      console.log(updateProfile)
 
-      if (data.coverImage) {
-        // En una aplicación real, aquí subirías la imagen a un servidor y obtendrías la URL
-        updatedProfile.coverImage = URL.createObjectURL(data.coverImage)
-      }
+      await updateProfile(updatedProfile)
+      await fetchProfile()
 
-      await onSave(updatedProfile)
       toast({
         title: "Perfil actualizado",
         description: "Tu perfil ha sido actualizado correctamente.",
       })
+
+      // Close the form after successful update
+      onCancel()
     } catch (error) {
       console.error("Error al guardar el perfil:", error)
       toast({
@@ -116,77 +108,13 @@ export const EditProfileForm: React.FC<EditProfileFormProps> = ({ profile, onSav
     }
   }
 
+  if (!profile) {
+    return <div>Cargando perfil...</div>
+  }
+
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <FormField
-            control={form.control}
-            name="avatar"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel className="text-foreground font-medium">Foto de perfil</FormLabel>
-                <FormControl>
-                  <div className="flex items-center space-x-2">
-                    <Input
-                      type="file"
-                      accept="image/*"
-                      onChange={(e) => field.onChange(e.target.files?.[0])}
-                      className="bg-background border-input focus:border-primary hidden"
-                      id="avatar-upload"
-                    />
-                    <label
-                      htmlFor="avatar-upload"
-                      className="flex items-center justify-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 cursor-pointer"
-                    >
-                      <Upload className="w-4 h-4 mr-2" />
-                      Subir foto
-                    </label>
-                    {field.value && <span className="text-sm text-muted-foreground">{field.value.name}</span>}
-                  </div>
-                </FormControl>
-                <FormDescription className="text-muted-foreground">
-                  Sube una nueva foto de perfil. Tamaño máximo: 5MB.
-                </FormDescription>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-
-          <FormField
-            control={form.control}
-            name="coverImage"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel className="text-foreground font-medium">Imagen de portada</FormLabel>
-                <FormControl>
-                  <div className="flex items-center space-x-2">
-                    <Input
-                      type="file"
-                      accept="image/*"
-                      onChange={(e) => field.onChange(e.target.files?.[0])}
-                      className="bg-background border-input focus:border-primary hidden"
-                      id="cover-upload"
-                    />
-                    <label
-                      htmlFor="cover-upload"
-                      className="flex items-center justify-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 cursor-pointer"
-                    >
-                      <Upload className="w-4 h-4 mr-2" />
-                      Subir portada
-                    </label>
-                    {field.value && <span className="text-sm text-muted-foreground">{field.value.name}</span>}
-                  </div>
-                </FormControl>
-                <FormDescription className="text-muted-foreground">
-                  Sube una nueva imagen de portada. Tamaño máximo: 5MB.
-                </FormDescription>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-        </div>
-
         <FormField
           control={form.control}
           name="name"
@@ -198,27 +126,6 @@ export const EditProfileForm: React.FC<EditProfileFormProps> = ({ profile, onSav
               </FormControl>
               <FormDescription className="text-muted-foreground">
                 Este es tu nombre público. Puede ser tu nombre real o un pseudónimo.
-              </FormDescription>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-
-        <FormField
-          control={form.control}
-          name="email"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel className="text-foreground font-medium">Email</FormLabel>
-              <FormControl>
-                <Input
-                  placeholder="tu@ejemplo.com"
-                  {...field}
-                  className="bg-background border-input focus:border-primary"
-                />
-              </FormControl>
-              <FormDescription className="text-muted-foreground">
-                Tu dirección de email. No será visible públicamente.
               </FormDescription>
               <FormMessage />
             </FormItem>
@@ -252,14 +159,21 @@ export const EditProfileForm: React.FC<EditProfileFormProps> = ({ profile, onSav
           render={({ field }) => (
             <FormItem>
               <FormLabel className="text-foreground font-medium">Ubicación</FormLabel>
-              <FormControl>
-                <Input
-                  placeholder="Tu ciudad o país"
-                  {...field}
-                  className="bg-background border-input focus:border-primary"
-                />
-              </FormControl>
-              <FormDescription className="text-muted-foreground">Donde te encuentras actualmente.</FormDescription>
+              <Select onValueChange={field.onChange} defaultValue={field.value}>
+                <FormControl>
+                  <SelectTrigger className="bg-background border-input focus:border-primary">
+                    <SelectValue placeholder="Selecciona tu ubicación" />
+                  </SelectTrigger>
+                </FormControl>
+                <SelectContent>
+                  {countries.map((country: { code: string; name: string; emoji: string }) => (
+                    <SelectItem key={country.code} value={country.code}>
+                      {country.emoji} {country.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <FormDescription className="text-muted-foreground">Tu país de residencia.</FormDescription>
               <FormMessage />
             </FormItem>
           )}
