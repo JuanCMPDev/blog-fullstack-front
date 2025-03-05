@@ -20,18 +20,17 @@ export function CoverImageUpload({
 }: CoverImageUploadProps) {
   const [isDragging, setIsDragging] = useState(false)
   const inputRef = useRef<HTMLInputElement | null>(null)
-  const { ref, onChange: registerOnChange, ...rest } = register('coverImage')
+  // Extraemos onChange y ref de register para el campo "coverImage"
+  const { ref, onChange: registerOnChange, ...rest } = register("coverImage")
 
   const handleImageChange = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
       const file = e.target.files?.[0]
       if (file) {
-        // Actualizar previsualización
-        const reader = new FileReader()
-        reader.onloadend = () => setCoverImagePreview(reader.result as string)
-        reader.readAsDataURL(file)
-
-        // Actualizar formulario
+        // Generar URL de preview directamente sin convertir a base64
+        const previewUrl = URL.createObjectURL(file)
+        setCoverImagePreview(previewUrl)
+        // Llamar al onChange de react-hook-form para almacenar el archivo
         registerOnChange(e)
       }
     },
@@ -55,19 +54,17 @@ export function CoverImageUpload({
       const file = e.dataTransfer.files[0]
 
       if (file?.type.startsWith("image/")) {
-        // Actualizar previsualización
-        const reader = new FileReader()
-        reader.onloadend = () => setCoverImagePreview(reader.result as string)
-        reader.readAsDataURL(file)
+        // Generar URL de preview
+        const previewUrl = URL.createObjectURL(file)
+        setCoverImagePreview(previewUrl)
 
-        // Crear nuevo FileList artificial
+        // Crear nuevo FileList artificial y actualizar el input
         const dataTransfer = new DataTransfer()
         dataTransfer.items.add(file)
-
         if (inputRef.current) {
-          // Actualizar input y trigger onChange
           inputRef.current.files = dataTransfer.files
-          const changeEvent = new Event('change', { bubbles: true })
+          // Disparar evento change para actualizar react-hook-form
+          const changeEvent = new Event("change", { bubbles: true })
           inputRef.current.dispatchEvent(changeEvent)
         }
       }
@@ -91,7 +88,7 @@ export function CoverImageUpload({
           {coverImagePreview ? (
             <div className="relative inline-block">
               <img
-                src={coverImagePreview || "/placeholder.svg"}
+                src={coverImagePreview}
                 alt="Cover preview"
                 className="max-h-48 w-auto rounded-lg shadow-md"
               />
@@ -101,14 +98,11 @@ export function CoverImageUpload({
                 size="icon"
                 className="absolute -top-2 -right-2 h-6 w-6 rounded-full"
                 onClick={() => {
-                  setCoverImagePreview(null);
-
-                  // Resetear el input file
+                  setCoverImagePreview(null)
                   if (inputRef.current) {
-                    inputRef.current.value = "";
-                    // Disparar evento change para actualizar react-hook-form
-                    const changeEvent = new Event("change", { bubbles: true });
-                    inputRef.current.dispatchEvent(changeEvent);
+                    inputRef.current.value = ""
+                    const changeEvent = new Event("change", { bubbles: true })
+                    inputRef.current.dispatchEvent(changeEvent)
                   }
                 }}
               >
@@ -150,4 +144,3 @@ export function CoverImageUpload({
     </div>
   )
 }
-

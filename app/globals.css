@@ -390,3 +390,12 @@ textarea:focus {
 .ql-container.ql-snow {
   padding-right: 8px;
 }
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+}

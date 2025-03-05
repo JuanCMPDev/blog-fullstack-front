@@ -1,6 +1,6 @@
 import { create } from "zustand"
 import { persist } from "zustand/middleware"
-import { AuthState, User, UserRole } from "@/lib/types"
+import { AuthState, UserProfile, UserRole } from "@/lib/types"
 import { decodeJwt } from "jose"
 
 interface JWTPayload {
@@ -17,7 +17,7 @@ export const useAuth = create<AuthState>()(
       accessToken: null,
       isLoading: false,
 
-      setUser: (user: User | null) => set({ user }),
+      setUser: (user: UserProfile | null) => set({ user }),
 
       setAccessToken: (token: string | null) => set({ accessToken: token }),
 
@@ -46,7 +46,7 @@ export const useAuth = create<AuthState>()(
 
           // Llama a la API para obtener los datos completos del usuario usando el ID del token
           const userResponse = await fetch(
-            process.env.NEXT_PUBLIC_API_URL + `users/profile/${decoded.id}`,
+            process.env.NEXT_PUBLIC_API_URL + `profile/${decoded.id}`,
             {
               method: "GET",
               headers: {
@@ -66,7 +66,7 @@ export const useAuth = create<AuthState>()(
             "editor": UserRole.Editor,
           }
           const normalizedRole = roleMapping[(decoded.role as string).toLocaleLowerCase()]
-          const normalizedUser: User = {
+          const normalizedUser: UserProfile = {
             ...userData,
             role: normalizedRole,
           }

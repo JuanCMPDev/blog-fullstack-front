@@ -51,6 +51,7 @@ export interface User extends BaseUser {
 
 export interface Post extends BasePost {
   content: string
+  slug: string
   author: Author
   coverImage: string
   date: string
@@ -116,12 +117,32 @@ export interface ProtectedRouteProps {
   allowedRoles: string[]
 }
 
+export interface RenderProfileData {
+  profile: UserProfile;
+  savedPosts: Post[];
+  isEditing: boolean;
+  canEdit: boolean;
+  handlers: {
+    handleEdit: () => void;
+    handleCancel: () => void;
+    handleSave: (updatedProfile: UserProfile) => Promise<void>;
+    handleAvatarChange: (file: File) => void;
+    handleAvatarUpdate: () => Promise<void>;
+    handleCoverImageChange: (file: File) => void;
+    handleCoverImageUpdate: () => Promise<void>;
+  };
+}
+
+export interface ProfileContainerProps {
+  nick?: string;
+  render: (data: RenderProfileData) => React.ReactNode;
+}
 // Estado y hooks
 export interface AuthState {
-  user: User | null
+  user: UserProfile | null
   accessToken: string | null
   isLoading: boolean
-  setUser: (user: User | null) => void
+  setUser: (user: UserProfile | null) => void
   setAccessToken: (token: string | null) => void
   login: (email: string, password: string) => Promise<void>
   refreshAccessToken: () => Promise<void>
@@ -145,8 +166,12 @@ export interface UseCommentsReturn {
 
 // Perfil del usuario
 export interface UserProfile {
+  userId: string
   name: string
   bio: string
+  email: string
+  nick: string
+  role: UserRole
   avatar: string
   coverImage: string
   location: string
@@ -186,6 +211,7 @@ export type Settings = {
 
 export const postSchema = z.object({
   title: z.string().min(1, "El título es requerido"),
+  slug: z.string().min(1, "El slug es requerido"),
   excerpt: z.string().min(1, "El extracto es requerido"),
   content: z.string().min(1, "El contenido es requerido"),
   tags: z.array(z.string()).min(1, "Debes agregar al menos un tag"),
