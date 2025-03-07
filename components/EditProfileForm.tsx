@@ -33,6 +33,42 @@ const profileFormSchema = z.object({
   skills: z.array(z.object({ value: z.string() })),
 })
 
+// Función auxiliar para extraer el nombre de usuario de una URL
+const extractUsername = (url: string, domain: string): string => {
+  try {
+    if (!url.includes('http://') && !url.includes('https://')) {
+      url = 'https://' + url;
+    }
+    const urlObj = new URL(url);
+    const path = urlObj.pathname.split('/').filter(Boolean);
+    
+    // Si el dominio es linkedin y la URL tiene formato linkedin.com/in/username
+    if (domain === 'linkedin.com/in' && urlObj.hostname.includes('linkedin.com') && path.length > 0) {
+      return path[path.length - 1];
+    }
+    
+    // Para twitter y github, extraemos el username que viene después del dominio
+    if (urlObj.hostname.includes(domain.split('/')[0])) {
+      return path.length > 0 ? path[path.length - 1] : "";
+    }
+    
+    // Si no es una URL válida o no contiene el dominio correcto, devolvemos el texto original
+    return url;
+  } catch {
+    // Si hay un error al parsear la URL, asumimos que es solo el nombre de usuario
+    return url.replace(/^@/, ''); // Eliminar @ si existe
+  }
+}
+
+// Función auxiliar para extraer el código del país a partir del texto con emoji
+const extractCountryCode = (locationString: string): string => {
+  // Buscar el país cuyo nombre está contenido en el string
+  const country = countries.find(
+    (country) => locationString.includes(country.name) || locationString.includes(country.emoji)
+  );
+  return country ? country.code : "";
+};
+
 type ProfileFormValues = z.infer<typeof profileFormSchema>
 
 interface EditProfileFormProps {
@@ -44,12 +80,16 @@ interface EditProfileFormProps {
 export const EditProfileForm: React.FC<EditProfileFormProps> = ({ profile, onCancel, onSave }) => {
   const [isSaving, setIsSaving] = useState(false)
 
+  // Extraer el código del país a partir de la ubicación guardada
+  const countryCode = extractCountryCode(profile.location || "");
+  console.log("Ubicación del perfil:", profile.location, "Código de país extraído:", countryCode);
+
   const form = useForm<ProfileFormValues>({
     resolver: zodResolver(profileFormSchema),
     defaultValues: {
       name: profile.name || "",
       bio: profile.bio || "",
-      location: profile.location || "",
+      location: countryCode || "",
       twitter: profile.socialLinks.twitter ? `https://twitter.com/${profile.socialLinks.twitter}` : "",
       github: profile.socialLinks.github ? `https://github.com/${profile.socialLinks.github}` : "",
       linkedin: profile.socialLinks.linkedin ? `https://linkedin.com/in/${profile.socialLinks.linkedin}` : "",
@@ -63,10 +103,14 @@ export const EditProfileForm: React.FC<EditProfileFormProps> = ({ profile, onCan
   });
 
   useEffect(() => {
+    // Extraer el código del país cada vez que cambia el perfil
+    const profileCountryCode = extractCountryCode(profile.location || "");
+    console.log("Reset formulario - Ubicación:", profile.location, "Código:", profileCountryCode);
+    
     form.reset({
       name: profile.name,
       bio: profile.bio,
-      location: profile.location,
+      location: profileCountryCode, // Usar el código del país en lugar del texto completo
       twitter: profile.socialLinks.twitter ? `https://twitter.com/${profile.socialLinks.twitter}` : "",
       github: profile.socialLinks.github ? `https://github.com/${profile.socialLinks.github}` : "",
       linkedin: profile.socialLinks.linkedin ? `https://linkedin.com/in/${profile.socialLinks.linkedin}` : "",
@@ -74,13 +118,38 @@ export const EditProfileForm: React.FC<EditProfileFormProps> = ({ profile, onCan
     })
   }, [profile, form])
 
-
-
   const onSubmit = async (data: ProfileFormValues) => {
     setIsSaving(true)
     try {
       const selectedCountry = countries.find((country) => country.code === data.location)
       const locationString = selectedCountry ? `${selectedCountry.emoji} ${selectedCountry.name}` : data.location
+
+      // Extraer usernames de las URLs
+      const twitterUsername = data.twitter ? extractUsername(data.twitter, 'twitter.com') : ""
+      const githubUsername = data.github ? extractUsername(data.github, 'github.com') : ""
+      const linkedinUsername = data.linkedin ? extractUsername(data.linkedin, 'linkedin.com/in') : ""
+      
+      // Convertir skills a formato simple de array
+      const skills = data.skills.map((skill) => skill.value)
+      
+      // Verificar si hay cambios antes de enviar al backend
+      const hasChanges = 
+        profile.name !== data.name ||
+        profile.bio !== data.bio ||
+        profile.location !== locationString ||
+        profile.socialLinks.twitter !== twitterUsername ||
+        profile.socialLinks.github !== githubUsername ||
+        profile.socialLinks.linkedin !== linkedinUsername ||
+        JSON.stringify(profile.skills) !== JSON.stringify(skills)
+      
+      if (!hasChanges) {
+        toast({
+          title: "Sin cambios",
+          description: "No se detectaron cambios en el perfil.",
+        })
+        onCancel()
+        return
+      }
 
       const updatedProfile: UserProfile = {
         ...profile,
@@ -88,18 +157,23 @@ export const EditProfileForm: React.FC<EditProfileFormProps> = ({ profile, onCan
         bio: data.bio,
         location: locationString,
         socialLinks: {
-          twitter: data.twitter ? new URL(data.twitter).pathname.split("/").pop() || "" : "",
-          github: data.github ? new URL(data.github).pathname.split("/").pop() || "" : "",
-          linkedin: data.linkedin ? new URL(data.linkedin).pathname.split("/").pop() || "" : "",
+          twitter: twitterUsername,
+          github: githubUsername,
+          linkedin: linkedinUsername,
         },
-        skills: data.skills.map((skill) => skill.value),
+        skills: skills,
       }
 
       await onSave(updatedProfile)
+      
+      // Hacer scroll hacia arriba
+      window.scrollTo({ top: 0, behavior: 'smooth' })
+      
       toast({
         title: "Perfil actualizado",
         description: "Tu perfil ha sido actualizado correctamente.",
       })
+      
       onCancel()
     } catch (error) {
       console.error("Error al guardar el perfil:", error)
@@ -154,7 +228,7 @@ export const EditProfileForm: React.FC<EditProfileFormProps> = ({ profile, onCan
                     <MapPin className="w-4 h-4 mr-2" />
                     Ubicación
                   </FormLabel>
-                  <Select onValueChange={field.onChange} defaultValue={field.value}>
+                  <Select onValueChange={field.onChange} value={field.value}>
                     <FormControl>
                       <SelectTrigger className="bg-background border-input focus:border-primary">
                         <SelectValue placeholder="Selecciona tu ubicación" />

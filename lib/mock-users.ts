@@ -2,7 +2,7 @@ export interface User {
   id: string
   name: string
   email: string
-  role: "usuario" | "editor" | "moderador" | "admin"
+  role: "usuario" | "editor" | "admin"
   status: "activo" | "baneado"
   lastLogin: string
   registrationDate: string
@@ -34,7 +34,7 @@ export const mockUsers: User[] = [
     id: "3",
     name: "Carlos Rodríguez",
     email: "carlos@ejemplo.com",
-    role: "moderador",
+    role: "editor",
     status: "activo",
     lastLogin: "2023-07-13T09:20:00Z",
     registrationDate: "2023-03-10T00:00:00Z",
@@ -104,7 +104,7 @@ export const mockUsers: User[] = [
     id: "10",
     name: "Carmen Ruiz",
     email: "carmen@ejemplo.com",
-    role: "moderador",
+    role: "editor",
     status: "activo",
     lastLogin: "2023-07-16T11:45:00Z",
     registrationDate: "2023-04-15T00:00:00Z",
@@ -144,7 +144,7 @@ export const mockUsers: User[] = [
     id: "14",
     name: "Sofia Rodriguez",
     email: "sofia@ejemplo.com",
-    role: "moderador",
+    role: "editor",
     status: "activo",
     lastLogin: "2023-07-16T14:15:00Z",
     registrationDate: "2023-04-25T00:00:00Z",
@@ -184,7 +184,7 @@ export const mockUsers: User[] = [
     id: "18",
     name: "Maria Sanchez",
     email: "marias@ejemplo.com",
-    role: "moderador",
+    role: "editor",
     status: "baneado",
     lastLogin: "2023-07-12T16:45:00Z",
     registrationDate: "2023-05-15T00:00:00Z",

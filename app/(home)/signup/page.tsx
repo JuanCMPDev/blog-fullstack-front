@@ -89,13 +89,19 @@ export default function SignUp() {
   async function onSubmit(data: z.infer<typeof formSchema>) {
     setIsLoading(true)
     try {
-      console.log(data)
+      const dataToSend = {
+        name: data.name,
+        nick: data.nick,
+        email: data.email,
+        password: data.password
+      }
+      console.log(dataToSend)
       const res = await fetch(process.env.NEXT_PUBLIC_API_URL + "auth/register", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify(data),
+        body: JSON.stringify(dataToSend),
       })
       if (!res.ok) {
         const { message } = await res.json()

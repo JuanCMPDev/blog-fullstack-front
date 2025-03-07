@@ -1,8 +1,7 @@
 'use client'
 
 import { useState } from "react"
-import type { User } from "@/lib/mock-users"
-import { useUsers } from "@/hooks/use-users"
+import { useUsers, type User } from "@/hooks/use-users"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
@@ -35,11 +34,14 @@ export function UsersTable() {
     clearSearch,
     searchTerm,
     isLoading,
+    totalUsers,
   } = useUsers(USERS_PER_PAGE)
 
   const [localSearchTerm, setLocalSearchTerm] = useState(searchTerm)
 
-  const formatDate = (dateString: string) => {
+  const formatDate = (dateString: string | null) => {
+    if (!dateString) return "Nunca"
+    
     return new Date(dateString).toLocaleDateString("es-ES", {
       year: "numeric",
       month: "long",
@@ -49,12 +51,30 @@ export function UsersTable() {
 
   const getRoleBadgeVariant = (role: User["role"]) => {
     switch (role) {
-      case "admin":
+      case "ADMIN":
         return "default"
+      case "EDITOR":
+        return "secondary"
+      case "USER":
       default:
         return "outline"
     }
   }
+
+  const getRoleDisplayName = (role: User["role"]) => {
+    switch (role) {
+      case "ADMIN":
+        return "Administrador"
+      case "EDITOR":
+        return "Editor"
+      case "USER":
+        return "Usuario"
+      default:
+        return role
+    }
+  }
+
+  const availableRoles: ("USER" | "EDITOR")[] = ["USER", "EDITOR"]
 
   const handleLocalSearch = () => {
     handleSearch(localSearchTerm)
@@ -63,6 +83,24 @@ export function UsersTable() {
   const handleClearSearch = () => {
     setLocalSearchTerm("")
     clearSearch()
+  }
+
+  const handleRoleChange = async (userId: string, newRole: "USER" | "EDITOR") => {
+    const user = users.find(u => u.id === userId);
+    if (!user) return;
+
+    if (user.role === "ADMIN") {
+      alert("No se puede cambiar el rol de un administrador");
+      return;
+    }
+
+    const success = await changeRole(userId, newRole);
+    
+    if (success) {
+      console.log(`Rol de usuario cambiado a ${newRole} exitosamente`);
+    } else {
+      console.error("No se pudo cambiar el rol del usuario");
+    }
   }
 
   return (
@@ -117,7 +155,7 @@ export function UsersTable() {
                   <TableCell className="font-medium">
                     <div className="flex items-center space-x-4">
                       <Avatar>
-                        <AvatarImage src={user.avatar} alt={user.name} />
+                        <AvatarImage src={user.avatar || undefined} alt={user.name} />
                         <AvatarFallback>{user.name.charAt(0)}</AvatarFallback>
                       </Avatar>
                       <span>{user.name}</span>
@@ -125,7 +163,7 @@ export function UsersTable() {
                   </TableCell>
                   <TableCell>{user.email}</TableCell>
                   <TableCell>
-                    <Badge variant={getRoleBadgeVariant(user.role)}>{user.role}</Badge>
+                    <Badge variant={getRoleBadgeVariant(user.role)}>{getRoleDisplayName(user.role)}</Badge>
                   </TableCell>
                   <TableCell>
                     <Badge
@@ -152,12 +190,21 @@ export function UsersTable() {
                         </DropdownMenuItem>
                         <DropdownMenuSeparator />
                         <DropdownMenuLabel>Cambiar rol</DropdownMenuLabel>
-                        {(["usuario", "editor", "moderador", "admin"] as const).map((role) => (
-                          <DropdownMenuItem key={role} onClick={() => changeRole(user.id, role)}>
+                        {user.role !== "ADMIN" ? (
+                          availableRoles.map((role) => (
+                            user.role !== role && (
+                              <DropdownMenuItem key={role} onClick={() => handleRoleChange(user.id, role)}>
+                                <Shield className="mr-2 h-4 w-4" />
+                                {getRoleDisplayName(role)}
+                              </DropdownMenuItem>
+                            )
+                          ))
+                        ) : (
+                          <DropdownMenuItem disabled>
                             <Shield className="mr-2 h-4 w-4" />
-                            {role.charAt(0).toUpperCase() + role.slice(1)}
+                            No modificable
                           </DropdownMenuItem>
-                        ))}
+                        )}
                         <DropdownMenuSeparator />
                         <DropdownMenuItem onClick={() => toggleBanStatus(user.id)}>
                           <UserX className="mr-2 h-4 w-4" />
@@ -176,6 +223,11 @@ export function UsersTable() {
               <Button variant="link" onClick={handleClearSearch} className="mt-2">
                 Limpiar búsqueda
               </Button>
+            </div>
+          )}
+          {totalUsers > 0 && (
+            <div className="text-sm text-muted-foreground mt-2 ml-4">
+              Mostrando {users.length} de {totalUsers} usuarios
             </div>
           )}
           <Pagination currentPage={currentPage} totalPages={totalPages} onPageChange={goToPage} className="my-4" />

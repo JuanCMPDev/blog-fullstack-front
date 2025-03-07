@@ -8,19 +8,22 @@ import { TagInput } from '@/components/admin/TagInput'
 import { CoverImageUpload } from '@/components/admin/CoverImageUpload'
 import { Card, CardContent } from './ui/card'
 import { useRouter } from 'next/navigation'
+import { PostFormData } from '@/lib/types'
+import { UseFormRegister, UseFormHandleSubmit, Control, FieldErrors, UseFormSetValue } from 'react-hook-form'
 
 interface CreatePostFormProps {
-  onSubmit: (data: any, isDraft?: boolean) => void;
+  onSubmit: (data: PostFormData, isDraft?: boolean) => void;
   handleTitleChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
   slug: string;
   setSlug: React.Dispatch<React.SetStateAction<string>>;
   coverImagePreview: string | null;
   setCoverImagePreview: React.Dispatch<React.SetStateAction<string | null>>;
-  handleSubmit: (fn: (data: any) => void) => (e: React.FormEvent<HTMLFormElement>) => void;
-  register: any;
-  control: any;
-  errors: any;
-  setValue: any;
+  setCoverImageFile?: React.Dispatch<React.SetStateAction<File | null>>;
+  handleSubmit: UseFormHandleSubmit<PostFormData>;
+  register: UseFormRegister<PostFormData>;
+  control: Control<PostFormData>;
+  errors: FieldErrors<PostFormData>;
+  setValue: UseFormSetValue<PostFormData>;
   tags: string[];
   setTags: React.Dispatch<React.SetStateAction<string[]>>;
 }
@@ -32,6 +35,7 @@ const CreatePostForm = ({
   setSlug,
   coverImagePreview,
   setCoverImagePreview,
+  setCoverImageFile,
   handleSubmit,
   register,
   control,
@@ -124,6 +128,11 @@ const CreatePostForm = ({
                   setCoverImagePreview={setCoverImagePreview}
                   error={errors.coverImage?.message?.toString() || ''}
                   register={register}
+                  onFileChange={(file) => {
+                    if (setCoverImageFile) {
+                      setCoverImageFile(file);
+                    }
+                  }}
                 />
               </div>
             </CardContent>
@@ -133,7 +142,13 @@ const CreatePostForm = ({
             <Button type="button" variant="outline" onClick={() => router.back()}>
               Cancelar
             </Button>
-            <Button type="button" variant="secondary" onClick={handleSubmit((data) => onSubmit(data, true))}>
+            <Button 
+              type="button" 
+              variant="secondary" 
+              onClick={() => {
+                handleSubmit((data) => onSubmit(data, true))();
+              }}
+            >
               Guardar como borrador
             </Button>
             <Button type="submit">Publicar Post</Button>

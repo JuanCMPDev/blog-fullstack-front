@@ -2,45 +2,33 @@ import { useState, useCallback, useRef } from "react"
 import { Button } from "@/components/ui/button"
 import { ImageIcon, X } from "lucide-react"
 import type React from "react"
-import { UseFormRegister } from "react-hook-form"
-import { PostFormData } from "@/lib/types"
 
-interface CoverImageUploadProps {
-  coverImagePreview: string | null
-  setCoverImagePreview: (preview: string | null) => void
+interface SimpleCoverImageUploadProps {
+  currentImage: string | null
+  previewImage: string | null
+  onImageChange: (file: File | null) => void
+  onRemoveImage?: () => void
   error?: string
-  register: UseFormRegister<PostFormData>
-  onFileChange?: (file: File | null) => void
 }
 
-export function CoverImageUpload({
-  coverImagePreview,
-  setCoverImagePreview,
-  error = "",
-  register,
-  onFileChange
-}: CoverImageUploadProps) {
+export function SimpleCoverImageUpload({
+  currentImage,
+  previewImage,
+  onImageChange,
+  onRemoveImage,
+  error = ""
+}: SimpleCoverImageUploadProps) {
   const [isDragging, setIsDragging] = useState(false)
   const inputRef = useRef<HTMLInputElement | null>(null)
-  // Extraemos onChange y ref de register para el campo "coverImage"
-  const { ref, onChange: registerOnChange, ...rest } = register("coverImage")
 
   const handleImageChange = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
       const file = e.target.files?.[0]
       if (file) {
-        // Generar URL de preview directamente sin convertir a base64
-        const previewUrl = URL.createObjectURL(file)
-        setCoverImagePreview(previewUrl)
-        // Llamar al onChange de react-hook-form para almacenar el archivo
-        registerOnChange(e)
-        // Notificar al componente padre sobre el cambio de archivo si se proporciona la función
-        if (onFileChange) {
-          onFileChange(file)
-        }
+        onImageChange(file)
       }
     },
-    [setCoverImagePreview, registerOnChange, onFileChange]
+    [onImageChange]
   )
 
   const handleDragOver = useCallback((e: React.DragEvent) => {
@@ -60,28 +48,26 @@ export function CoverImageUpload({
       const file = e.dataTransfer.files[0]
 
       if (file?.type.startsWith("image/")) {
-        // Generar URL de preview
-        const previewUrl = URL.createObjectURL(file)
-        setCoverImagePreview(previewUrl)
-
-        // Crear nuevo FileList artificial y actualizar el input
-        const dataTransfer = new DataTransfer()
-        dataTransfer.items.add(file)
-        if (inputRef.current) {
-          inputRef.current.files = dataTransfer.files
-          // Disparar evento change para actualizar react-hook-form
-          const changeEvent = new Event("change", { bubbles: true })
-          inputRef.current.dispatchEvent(changeEvent)
-          
-          // Notificar al componente padre sobre el cambio de archivo si se proporciona la función
-          if (onFileChange) {
-            onFileChange(file)
-          }
-        }
+        onImageChange(file)
       }
     },
-    [setCoverImagePreview, onFileChange]
+    [onImageChange]
   )
+
+  const handleRemoveImage = useCallback(() => {
+    if (onRemoveImage) {
+      onRemoveImage()
+    } else {
+      onImageChange(null)
+    }
+    
+    if (inputRef.current) {
+      inputRef.current.value = ""
+    }
+  }, [onImageChange, onRemoveImage])
+
+  // Determinar qué imagen mostrar: primero la previsualización, luego la imagen actual
+  const displayImage = previewImage || currentImage
 
   return (
     <div>
@@ -89,18 +75,19 @@ export function CoverImageUpload({
         Imagen de Portada
       </label>
       <div
-        className={`mt-1 flex justify-center px-6 pt-5 pb-6 border-2 border-dashed rounded-lg transition-colors ${isDragging ? "border-primary bg-primary/5" : "border-border"
-          }`}
+        className={`mt-1 flex justify-center px-6 pt-5 pb-6 border-2 border-dashed rounded-lg transition-colors ${
+          isDragging ? "border-primary bg-primary/5" : "border-border"
+        }`}
         onDragOver={handleDragOver}
         onDragLeave={handleDragLeave}
         onDrop={handleDrop}
       >
         <div className="space-y-2 text-center">
-          {coverImagePreview ? (
+          {displayImage ? (
             <div className="relative inline-block">
               <img
-                src={coverImagePreview}
-                alt="Cover preview"
+                src={displayImage}
+                alt="Vista previa"
                 className="max-h-48 w-auto rounded-lg shadow-md"
               />
               <Button
@@ -108,19 +95,7 @@ export function CoverImageUpload({
                 variant="destructive"
                 size="icon"
                 className="absolute -top-2 -right-2 h-6 w-6 rounded-full"
-                onClick={() => {
-                  setCoverImagePreview(null)
-                  if (inputRef.current) {
-                    inputRef.current.value = ""
-                    const changeEvent = new Event("change", { bubbles: true })
-                    inputRef.current.dispatchEvent(changeEvent)
-                    
-                    // Notificar al componente padre que se eliminó el archivo
-                    if (onFileChange) {
-                      onFileChange(null)
-                    }
-                  }
-                }}
+                onClick={handleRemoveImage}
               >
                 <X className="h-4 w-4" />
               </Button>
@@ -141,11 +116,7 @@ export function CoverImageUpload({
                     type="file"
                     className="sr-only"
                     accept="image/*"
-                    {...rest}
-                    ref={(e) => {
-                      ref(e)
-                      inputRef.current = e
-                    }}
+                    ref={inputRef}
                     onChange={handleImageChange}
                   />
                 </label>
@@ -159,4 +130,4 @@ export function CoverImageUpload({
       {error && <p className="mt-1 text-sm text-destructive">{error}</p>}
     </div>
   )
-}
+} 

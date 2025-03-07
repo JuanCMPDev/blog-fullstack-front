@@ -1,207 +1,232 @@
 "use client"
 
-import { use } from "react"
-import { useState, useEffect } from "react"
-import { useRouter } from "next/navigation"
-import { useForm } from "react-hook-form"
-import { zodResolver } from "@hookform/resolvers/zod"
-import { motion } from "framer-motion"
-import { FileText } from "lucide-react"
+import { useState, useEffect, useRef } from "react"
+import { useParams, useRouter } from "next/navigation"
+import { Loader2, Save, X } from "lucide-react"
+import { SimpleCoverImageUpload } from "@/components/admin/SimpleCoverImageUpload"
+import { SimpleContentEditor } from "@/components/admin/SimpleContentEditor"
+import { SimpleTagInput } from "@/components/admin/SimpleTagInput"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
-import { useToast } from "@/hooks/use-toast"
-import { Card, CardContent } from "@/components/ui/card"
-import { ContentEditor } from "@/components/admin/ContentEditor"
-import { TagInput } from "@/components/admin/TagInput"
-import { CoverImageUpload } from "@/components/admin/CoverImageUpload"
-import { postSchema, type PostFormData, type Post } from "@/lib/types"
-import { mockPosts } from "@/lib/mock-posts"
+import { Label } from "@/components/ui/label"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Alert, AlertDescription } from "@/components/ui/alert"
+import { Skeleton } from "@/components/ui/skeleton"
+import type { Post } from "@/lib/types"
+import { usePost } from "@/lib/hooks/usePost"
 
-export default function EditPostPage({ params }: { params: Promise<{ id: string }> }) {
-  const resolvedParams = use(params)
+export default function EditPostPage() {
+  const params = useParams()
   const router = useRouter()
-  const { toast } = useToast()
-  const [coverImagePreview, setCoverImagePreview] = useState<string | null>(null)
-  const [tags, setTags] = useState<string[]>([])
-  const [post, setPost] = useState<Post | null>(null)
-  const [isLoading, setIsLoading] = useState(true)
-
-
-  const {
-    register,
-    handleSubmit,
-    control,
-    formState: { errors },
-    setValue,
-    reset,
-  } = useForm<PostFormData>({
-    resolver: zodResolver(postSchema),
-    defaultValues: {
-      title: "",
-      excerpt: "",
-      content: "",
-      tags: [],
-    },
+  const postId = Number(params.id)
+  
+  // Usar directamente el hook usePost en lugar de PostEditContainer
+  const { post, isLoading, error, updatePost } = usePost({ postId })
+  const [isSaving, setIsSaving] = useState(false)
+  const [selectedImage, setSelectedImage] = useState<File | null>(null)
+  const [imagePreview, setImagePreview] = useState<string | null>(null)
+  const [imageWasRemoved, setImageWasRemoved] = useState(false)
+  
+  // Definir el estado en el componente principal
+  const [formData, setFormData] = useState<Partial<Post>>({
+    title: "",
+    excerpt: "",
+    content: "",
+    tags: []
   })
-
+  
+  // Referencia para controlar la inicialización
+  const initialized = useRef(false)
+  
+  // Inicializar el formulario cuando el post está disponible
   useEffect(() => {
-    if (post) {
-      reset({
-        title: post.title,
-        excerpt: post.excerpt,
-        content: post.content,
-        tags: post.tags,
-        coverImage: undefined, // Mantener como undefined para edición
-      });
-      setCoverImagePreview(post.coverImage);
+    if (post && !initialized.current) {
+      setFormData({
+        title: post.title || "",
+        excerpt: post.excerpt || "",
+        content: post.content || "",
+        tags: post.tags || []
+      })
+      initialized.current = true
     }
-  }, [post, reset]);
+  }, [post])
+  
+  // Definir las funciones de manejo de cambios
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    const { name, value } = e.target
+    setFormData(prev => ({ ...prev, [name]: value }))
+  }
 
-  useEffect(() => {
-    const fetchPost = async () => {
-      setIsLoading(true)
-      const fetchedPost = mockPosts.find((p) => p.id === Number.parseInt(resolvedParams.id))
+  const handleContentChange = (value: string) => {
+    setFormData(prev => ({ ...prev, content: value }))
+  }
 
-      if (fetchedPost) {
-        setPost(fetchedPost)
-        reset({
-          title: fetchedPost.title,
-          excerpt: fetchedPost.excerpt,
-          content: fetchedPost.content,
-          tags: fetchedPost.tags,
-        })
-        setTags(fetchedPost.tags)
-        setCoverImagePreview(fetchedPost.coverImage)
-      } else {
-        toast({
-          title: "Error",
-          description: "No se pudo encontrar el post",
-          variant: "destructive",
-        })
-        router.push("/admin/posts")
+  const handleTagsChange = (tags: string[]) => {
+    setFormData(prev => ({ ...prev, tags }))
+  }
+  
+  const handleImageChange = (file: File | null) => {
+    if (file) {
+      setSelectedImage(file)
+      setImageWasRemoved(false)
+      
+      // Crear una URL para previsualizar la imagen
+      const reader = new FileReader()
+      reader.onloadend = () => {
+        setImagePreview(reader.result as string)
       }
-      setIsLoading(false)
+      reader.readAsDataURL(file)
+    } else {
+      setSelectedImage(null)
+      setImagePreview(null)
     }
-
-    fetchPost()
-  }, [resolvedParams.id, reset, router, toast])
-
-  const onSubmit = async (data: PostFormData, publish = false) => {
-    if (!post) return;
-
-    const updatedPost: Post = {
-      ...post,
-      title: data.title,
-      excerpt: data.excerpt,
-      content: data.content,
-      tags: data.tags,
-      coverImage: data.coverImage?.[0]
-        ? URL.createObjectURL(data.coverImage[0])
-        : post.coverImage,
-      publishDate: publish ? new Date().toISOString() : post.publishDate,
-    };
-
-    // Lógica de actualización simulada
-    console.log("Actualizando post:", updatedPost)
-
-    toast({
-      title: publish ? "Post publicado" : "Borrador guardado",
-      description: publish ? "Tu post ha sido publicado exitosamente." : "Tu borrador ha sido guardado exitosamente.",
-    })
-
-    router.push("/admin/posts")
+  }
+  
+  const handleImageRemove = () => {
+    setSelectedImage(null)
+    setImagePreview(null)
+    setImageWasRemoved(true)
+  }
+  
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    
+    setIsSaving(true)
+    
+    try {
+      // Determinar si necesitamos enviar la imagen
+      let imageToSend: File | null | undefined = undefined
+      
+      if (imageWasRemoved) {
+        // Si el usuario eliminó la imagen, enviamos null para indicar que se debe eliminar
+        imageToSend = null
+      } else if (selectedImage) {
+        // Si hay una nueva imagen seleccionada
+        imageToSend = selectedImage
+      }
+      
+      const success = await updatePost(formData, imageToSend)
+      
+      if (success) {
+        router.push('/admin/posts')
+      }
+    } catch (err) {
+      console.error('Error al guardar el post:', err)
+    } finally {
+      setIsSaving(false)
+    }
+  }
+  
+  const handleCancel = () => {
+    router.push('/admin/posts')
   }
 
   if (isLoading) {
-    return <div>Cargando...</div>
+    return (
+      <div className="container mx-auto px-4 py-8">
+        <Card>
+          <CardHeader>
+            <Skeleton className="h-8 w-64" />
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <Skeleton className="h-10 w-full" />
+            <Skeleton className="h-10 w-full" />
+            <Skeleton className="h-40 w-full" />
+            <Skeleton className="h-10 w-full" />
+            <Skeleton className="h-60 w-full" />
+          </CardContent>
+        </Card>
+      </div>
+    )
   }
 
-  if (!post) {
-    return <div>No se encontró el post</div>
-  }
+  // Determinar qué imagen mostrar
+  const displayImage = imagePreview || (imageWasRemoved ? null : post?.coverImage || null)
 
   return (
     <div className="container mx-auto px-4 py-8">
-      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}>
-        <div className="flex items-center justify-between mb-8">
-          <h1 className="text-3xl font-bold flex items-center">
-            <FileText className="mr-2 h-8 w-8 text-primary" />
-            Editar Post
-          </h1>
-          <Button onClick={() => router.back()} variant="outline">
-            Cancelar
-          </Button>
-        </div>
+      <Card className="bg-gradient-to-br from-background to-secondary/20">
+        <CardHeader>
+          <CardTitle className="text-3xl font-bold">Editar Post</CardTitle>
+        </CardHeader>
+        <CardContent>
+          {error && (
+            <Alert variant="destructive" className="mb-6">
+              <AlertDescription>{error}</AlertDescription>
+            </Alert>
+          )}
 
-        <form onSubmit={handleSubmit((data) => onSubmit(data, !post?.publishDate))} className="space-y-8">
-          <Card>
-            <CardContent className="p-6">
-              <div className="space-y-6">
-                <div>
-                  <label htmlFor="title" className="block text-sm font-medium mb-2">
-                    Título
-                  </label>
-                  <Input
-                    id="title"
-                    {...register("title")}
-                    className="w-full bg-secondary/50"
-                    placeholder="Ingresa el título del post"
-                  />
-                  {errors.title && (
-                    <p className="mt-1 text-sm text-destructive">{errors.title.message || "Error en el título"}</p>
-                  )}
-                </div>
+          <form onSubmit={handleSubmit} className="space-y-6">
+            <div className="space-y-2">
+              <Label htmlFor="title">Título</Label>
+              <Input
+                id="title"
+                name="title"
+                value={formData.title}
+                onChange={handleChange}
+                placeholder="Título del post"
+                required
+              />
+            </div>
 
-                <div>
-                  <label htmlFor="excerpt" className="block text-sm font-medium mb-2">
-                    Extracto
-                  </label>
-                  <Textarea
-                    id="excerpt"
-                    {...register("excerpt")}
-                    className="w-full min-h-[100px] bg-secondary/50 resize-none"
-                    placeholder="Escribe un breve extracto del post"
-                  />
-                  {errors.excerpt && (
-                    <p className="mt-1 text-sm text-destructive">{errors.excerpt.message || "Error en el extracto"}</p>
-                  )}
-                </div>
+            <div className="space-y-2">
+              <Label htmlFor="excerpt">Extracto</Label>
+              <Textarea
+                id="excerpt"
+                name="excerpt"
+                value={formData.excerpt}
+                onChange={handleChange}
+                placeholder="Breve descripción del post"
+                className="min-h-[100px]"
+                required
+              />
+            </div>
 
-                <ContentEditor control={control} error={errors.content?.message || ""} />
+            <SimpleContentEditor
+              value={formData.content || ""}
+              onChange={handleContentChange}
+            />
 
-                <TagInput
-                  tags={tags}
-                  setTags={(newTags) => {
-                    setTags(newTags)
-                    setValue("tags", newTags)
-                  }}
-                  error={errors.tags?.message || ""}
-                />
+            <SimpleTagInput
+              tags={formData.tags || []}
+              onChange={handleTagsChange}
+            />
 
-                <CoverImageUpload
-                  coverImagePreview={coverImagePreview}
-                  setCoverImagePreview={(preview) => {
-                    setCoverImagePreview(preview);
-                    if (!preview) setValue("coverImage", undefined);
-                  }}
-                  error={errors.coverImage?.message?.toString() || ""}
-                  register={register}
-                />
-              </div>
-            </CardContent>
-          </Card>
+            <SimpleCoverImageUpload
+              currentImage={displayImage}
+              previewImage={imagePreview}
+              onImageChange={handleImageChange}
+              onRemoveImage={handleImageRemove}
+            />
 
-          <div className="flex justify-end gap-4">
-            <Button type="button" variant="outline" onClick={() => router.back()}>
-              Cancelar
-            </Button>
-            <Button type="submit" onClick={() => handleSubmit((data) => onSubmit(data, true))()}>
-              Actualizar publicación
-            </Button>
-          </div>
-        </form>
-      </motion.div>
+            <div className="flex justify-end space-x-2 pt-4">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={handleCancel}
+                disabled={isSaving}
+              >
+                <X className="mr-2 h-4 w-4" />
+                Cancelar
+              </Button>
+              <Button type="submit" disabled={isSaving}>
+                {isSaving ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Guardando...
+                  </>
+                ) : (
+                  <>
+                    <Save className="mr-2 h-4 w-4" />
+                    Guardar cambios
+                  </>
+                )}
+              </Button>
+            </div>
+          </form>
+        </CardContent>
+      </Card>
     </div>
   )
 }

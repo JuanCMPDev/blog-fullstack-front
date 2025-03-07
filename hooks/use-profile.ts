@@ -59,6 +59,14 @@ export const useProfile = (nick: string | undefined): UseProfileReturn => {
 
   useEffect(() => {
     let isMounted = true;
+    
+    // Si no hay nick, establecer un error y detener la carga
+    if (!nick) {
+      setError("No se ha especificado un usuario para mostrar el perfil");
+      setIsLoading(false);
+      return;
+    }
+    
     const loadProfile = async () => {
       try {
         setIsLoading(true);
@@ -93,6 +101,25 @@ export const useProfile = (nick: string | undefined): UseProfileReturn => {
     try {
       if (!accessToken) throw new Error("No access token available");
 
+      // Transformar el objeto UserProfile para que coincida con el formato esperado por el DTO
+      const profileDataForBackend = {
+        name: updatedProfile.name,
+        nick: updatedProfile.nick,
+        email: updatedProfile.email,
+        bio: updatedProfile.bio,
+        avatar: updatedProfile.avatar,
+        role: updatedProfile.role,
+        location: updatedProfile.location,
+        skills: updatedProfile.skills,
+        // Convertir las propiedades anidadas de socialLinks a campos separados de nivel superior
+        twitter: updatedProfile.socialLinks.twitter ? `https://twitter.com/${updatedProfile.socialLinks.twitter}` : undefined,
+        github: updatedProfile.socialLinks.github ? `https://github.com/${updatedProfile.socialLinks.github}` : undefined,
+        linkedin: updatedProfile.socialLinks.linkedin ? `https://linkedin.com/in/${updatedProfile.socialLinks.linkedin}` : undefined,
+        // No enviamos socialLinks como objeto anidado, ya que el DTO espera propiedades individuales
+      };
+
+      console.log("Datos enviados al backend:", profileDataForBackend);
+
       const response = await customFetch(`${process.env.NEXT_PUBLIC_API_URL}profile/me`, {
         method: "PATCH",
         headers: {
@@ -100,9 +127,12 @@ export const useProfile = (nick: string | undefined): UseProfileReturn => {
           "Content-Type": "application/json",
         },
         credentials: "include",
-        body: JSON.stringify(updatedProfile),
+        body: JSON.stringify(profileDataForBackend),
       });
-      if (!response.ok) throw new Error("Failed to update profile");
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || "Failed to update profile");
+      }
 
       const updatedData = await response.json();
       setProfile(updatedData);
@@ -146,7 +176,7 @@ export const useProfile = (nick: string | undefined): UseProfileReturn => {
     const formData = new FormData();
     formData.append("file", newCoverImage);
     try {
-      const response = await customFetch(`${process.env.NEXT_PUBLIC_API_URL}profile/${nick}/cover-image`, {
+      const response = await customFetch(`${process.env.NEXT_PUBLIC_API_URL}profile/me/cover-image`, {
         method: "PATCH",
         headers: { Authorization: `Bearer ${accessToken}` },
         credentials: "include",

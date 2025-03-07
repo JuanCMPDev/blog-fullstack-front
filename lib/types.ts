@@ -19,6 +19,12 @@ export enum PostLayout {
   Compact = "compact",
 }
 
+export enum PostStatus {
+  DRAFT = "DRAFT",
+  PUBLISHED = "PUBLISHED",
+  SCHEDULED = "SCHEDULED"
+}
+
 // Tipos base reutilizables
 export interface BaseUser {
   id: string
@@ -57,6 +63,7 @@ export interface Post extends BasePost {
   date: string
   publishDate: string | null
   readTime: number
+  status: PostStatus
 }
 
 export interface Comment {

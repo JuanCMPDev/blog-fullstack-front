@@ -14,6 +14,7 @@ export default function CreatePostPage() {
     setSlug,
     coverImagePreview,
     setCoverImagePreview,
+    setCoverImageFile,
     tags,
     setTags,
     handleTitleChange,
@@ -28,13 +29,14 @@ export default function CreatePostPage() {
       setSlug={setSlug}
       coverImagePreview={coverImagePreview}
       setCoverImagePreview={setCoverImagePreview}
+      setCoverImageFile={setCoverImageFile}
       register={register}
       control={control}
       errors={errors}
       setValue={setValue}
       tags={tags}
       setTags={setTags}
-      handleSubmit={handleSubmit}  // Aquí pasamos handleSubmit correctamente
+      handleSubmit={handleSubmit}
     />
   )
 }
