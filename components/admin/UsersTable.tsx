@@ -16,7 +16,7 @@ import {
 import { MoreHorizontal, Key, UserX, Shield, Search, X } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { Pagination } from "@/components/Pagination"
+import { Pagination } from "@/components/common/Pagination"
 import { UsersTableSkeleton } from "@/components/admin/UserTableSkeleton"
 
 const USERS_PER_PAGE = 10

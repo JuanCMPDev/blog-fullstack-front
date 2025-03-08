@@ -15,7 +15,7 @@ import { X, Plus, User, MapPin, Twitter, Github, Linkedin, Save, XCircle } from 
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { countries } from "@/lib/countries"
 import { Separator } from "@/components/ui/separator"
-import { Tag } from "@/components/Tag"
+import { Tag } from "@/components/common/Tag"
 
 const profileFormSchema = z.object({
   name: z.string().min(2, {

@@ -1,10 +1,10 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { BlogList } from "@/components/BlogList"
-import { Pagination } from "@/components/Pagination"
-import { Hero } from "@/components/Hero"
-import { Sidebar } from "@/components/Sidebar"
+import { BlogList } from "@/components/blog/BlogList"
+import { Pagination } from "@/components/common/Pagination"
+import { Hero } from "@/components/common/Hero"
+import { Sidebar } from "@/components/layout/Sidebar"
 import { motion, AnimatePresence } from "framer-motion"
 import { mockPosts } from "@/lib/mock-posts"
 

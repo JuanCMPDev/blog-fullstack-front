@@ -2,8 +2,8 @@
 
 import { useState, useEffect, useMemo } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
-import { BlogList } from "@/components/BlogList"
-import { Pagination } from "@/components/Pagination"
+import { BlogList } from "@/components/blog/BlogList"
+import { Pagination } from "@/components/common/Pagination"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
@@ -11,7 +11,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Search, SortAsc, SortDesc, X } from "lucide-react"
 import { motion, AnimatePresence } from "framer-motion"
 import { mockPosts } from "@/lib/mock-posts"
-import { Sidebar } from "@/components/Sidebar"
+import { Sidebar } from "@/components/layout/Sidebar"
 import { Badge } from "@/components/ui/badge"
 
 const POSTS_PER_PAGE = 6

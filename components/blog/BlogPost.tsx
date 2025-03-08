@@ -3,12 +3,12 @@ import { Button } from "@/components/ui/button"
 import { ThumbsUp, MessageSquare, ArrowRight, Calendar, Clock } from "lucide-react"
 import Image from "next/image"
 import Link from "next/link"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { format } from "date-fns"
 import { es } from "date-fns/locale"
 import type { Post } from "@/lib/types"
 import { useMediaQuery } from "@/hooks/use-media-query"
-import { Tag } from "@/components/Tag"
+import { Tag } from "@/components/common/Tag"
+import { AuthorAvatar } from "@/components/common/AuthorAvatar"
 
 export function BlogPost({
   id,
@@ -54,10 +54,7 @@ export function BlogPost({
           ))}
         </div>
         <div className="flex items-center text-sm text-muted-foreground">
-          <Avatar className="h-8 w-8 mr-2">
-            <AvatarImage src={author.avatar} alt={author.name} />
-            <AvatarFallback>{author.name.charAt(0)}</AvatarFallback>
-          </Avatar>
+          <AuthorAvatar author={author} className="h-8 w-8 mr-2" />
           <div>
             <p className="font-medium">{author.name}</p>
             <div className="flex items-center">

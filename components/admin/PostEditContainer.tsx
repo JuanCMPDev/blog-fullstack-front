@@ -1,6 +1,6 @@
-import { useState, useCallback } from "react"
+import React, { useState, useCallback } from "react"
 import { useRouter } from "next/navigation"
-import { usePost } from "@/lib/hooks/usePost"
+import { usePost } from "@/hooks/use-posts"
 import type { Post } from "@/lib/types"
 
 interface PostEditRenderData {

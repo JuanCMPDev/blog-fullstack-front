@@ -1,9 +1,9 @@
 "use client"
 
 import { motion } from "framer-motion"
-import { ContactForm } from "@/components/ContactForm"
-import { DownloadCV } from "@/components/DownloadCV"
-import { SocialLinks } from "@/components/SocialLinks"
+import { ContactForm } from "@/components/forms/ContactForm"
+import { DownloadCV } from "@/components/common/DownloadCV"
+import { SocialLinks } from "@/components/common/SocialLinks"
 import { Card, CardContent } from "@/components/ui/card"
 import { Sparkles } from "lucide-react"
 

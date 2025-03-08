@@ -92,7 +92,7 @@ export interface UserMenuProps {
 export interface MobileMenuProps {
   theme: string | undefined
   setTheme: (theme: string) => void
-  user: User | null
+  user: UserProfile | null
 }
 
 export interface BlogListProps {

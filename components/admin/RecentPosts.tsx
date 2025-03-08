@@ -1,4 +1,5 @@
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { getAvatarUrl } from "@/lib/utils"
 
 const recentPosts = [
   {
@@ -30,7 +31,7 @@ export function RecentPosts() {
       {recentPosts.map((post) => (
         <div key={post.id} className="flex items-center">
           <Avatar className="h-9 w-9">
-            <AvatarImage src={post.avatar} alt={`Avatar de ${post.author}`} />
+            <AvatarImage src={getAvatarUrl(post.avatar)} alt={`Avatar de ${post.author}`} />
             <AvatarFallback>
               {post.author
                 .split(" ")

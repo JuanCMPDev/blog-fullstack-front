@@ -16,13 +16,13 @@ import {
   DropdownMenuSubContent,
   DropdownMenuPortal,
 } from "@/components/ui/dropdown-menu"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
 import { Calendar as CalendarComponent } from "@/components/ui/calendar"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Post } from "@/lib/types"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
+import { AuthorAvatar } from "@/components/common/AuthorAvatar"
 import React from "react"
 
 interface PostsTableProps {
@@ -186,10 +186,7 @@ export function PostsTable({ posts, onDelete, onEdit, onStatusChange, isLoading 
                       <TableCell className="font-medium">{post.title}</TableCell>
                       <TableCell>
                         <div className="flex items-center space-x-2">
-                          <Avatar className="h-8 w-8">
-                            <AvatarImage src={post.author.avatar} alt={post.author.name} />
-                            <AvatarFallback>{post.author.name[0]}</AvatarFallback>
-                          </Avatar>
+                          <AuthorAvatar author={post.author} className="h-8 w-8" />
                           <span>{post.author.name}</span>
                         </div>
                       </TableCell>
@@ -229,7 +226,7 @@ export function PostsTable({ posts, onDelete, onEdit, onStatusChange, isLoading 
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end">
                               <DropdownMenuLabel>Acciones</DropdownMenuLabel>
-                              <DropdownMenuItem onClick={() => window.open(`/post/${post.id}`, "_blank")}>
+                              <DropdownMenuItem onClick={() => window.open(`/post/${post.slug}`, "_blank")}>
                                 <Eye className="mr-2 h-4 w-4" />
                                 <span>Ver</span>
                               </DropdownMenuItem>

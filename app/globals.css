@@ -123,6 +123,26 @@ body {
   border-radius: 0;
 }
 
+/* Estilos para bloques de código de React Quill */
+.ql-code-block-container {
+  background-color: hsl(var(--muted));
+  border-radius: 0.5rem;
+  padding: 1rem;
+  margin-bottom: 1.5rem;
+  overflow-x: auto;
+}
+
+.ql-code-block {
+  font-family: var(--font-mono);
+  font-size: 0.9rem;
+  line-height: 1.5;
+  white-space: pre;
+}
+
+.dark .ql-code-block-container {
+  background-color: hsl(var(--muted) / 0.5);
+}
+
 @layer utilities {
   .prose pre {
     @apply overflow-x-auto;

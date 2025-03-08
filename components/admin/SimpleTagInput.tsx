@@ -1,7 +1,7 @@
 import { useState } from "react"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
-import { Tag } from "@/components/Tag"
+import { Tag } from "@/components/common/Tag"
 import { X, Plus } from "lucide-react"
 
 interface SimpleTagInputProps {

@@ -7,8 +7,8 @@ import { Moon, Sun, Search, Code } from "lucide-react";
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { MobileMenu } from "./MobileMenu";
-import { UserMenu } from "./UserMenu";
+import { MobileMenu } from "@/components/layout/MobileMenu";
+import { UserMenu } from "@/components/auth/UserMenu";
 import { motion } from "framer-motion";
 import { useAuth } from "@/lib/auth";
 

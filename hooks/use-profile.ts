@@ -55,7 +55,7 @@ export const useProfile = (nick: string | undefined): UseProfileReturn => {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const { accessToken } = useAuth();
+  const { accessToken, setUser, user } = useAuth();
 
   useEffect(() => {
     let isMounted = true;
@@ -136,6 +136,12 @@ export const useProfile = (nick: string | undefined): UseProfileReturn => {
 
       const updatedData = await response.json();
       setProfile(updatedData);
+      
+      // Actualizar también el estado de autenticación si el perfil actualizado es del usuario actual
+      if (user && user.userId === updatedData.userId) {
+        setUser(updatedData);
+      }
+      
       return updatedData;
     } catch (err) {
       setError("Failed to update profile");
@@ -163,7 +169,14 @@ export const useProfile = (nick: string | undefined): UseProfileReturn => {
       });
       if (!response.ok) throw new Error("Failed to update avatar");
       const { avatarUrl } = await response.json();
+      
+      // Actualizar el perfil local
       setProfile(prev => (prev ? { ...prev, avatar: avatarUrl } : null));
+      
+      // Actualizar también el estado de autenticación si el perfil es del usuario actual
+      if (user && profile && user.userId === profile.userId) {
+        setUser({ ...user, avatar: avatarUrl });
+      }
     } catch (err) {
       setError("Failed to update avatar");
       throw err;
@@ -176,7 +189,7 @@ export const useProfile = (nick: string | undefined): UseProfileReturn => {
     const formData = new FormData();
     formData.append("file", newCoverImage);
     try {
-      const response = await customFetch(`${process.env.NEXT_PUBLIC_API_URL}profile/me/cover-image`, {
+      const response = await customFetch(`${process.env.NEXT_PUBLIC_API_URL}profile/cover-image`, {
         method: "PATCH",
         headers: { Authorization: `Bearer ${accessToken}` },
         credentials: "include",
@@ -184,7 +197,14 @@ export const useProfile = (nick: string | undefined): UseProfileReturn => {
       });
       if (!response.ok) throw new Error("Failed to update cover image");
       const { coverImageUrl } = await response.json();
+      
+      // Actualizar el perfil local
       setProfile(prev => (prev ? { ...prev, coverImage: coverImageUrl } : null));
+      
+      // Actualizar también el estado de autenticación si el perfil es del usuario actual
+      if (user && profile && user.userId === profile.userId) {
+        setUser({ ...user, coverImage: coverImageUrl });
+      }
     } catch (err) {
       setError("Failed to update cover image");
       throw err;

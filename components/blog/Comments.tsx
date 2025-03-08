@@ -47,7 +47,7 @@ const CommentItem: React.FC<CommentItemProps> = React.memo(
       }
     }, [replyingTo, comment.id])
 
-    const canDeleteComment = isAdmin() || (user && user.id === comment.author.id)
+    const canDeleteComment = isAdmin() || (user && user.userId === comment.author.id)
 
     const handleLike = () => {
       if (!user) {
@@ -196,7 +196,7 @@ export const Comments: React.FC<CommentsProps> = ({ comments: initialComments })
 
   const handleNewComment = () => {
     if (user) {
-      addNewComment(newComment, user.id)
+      addNewComment(newComment, user.userId)
       setNewComment("")
     } else {
       toast({

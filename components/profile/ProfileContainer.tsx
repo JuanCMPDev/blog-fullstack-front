@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { useProfile } from "@/hooks/use-profile";
-import { ProfileSkeleton } from "@/components/ProfileSkeleton";
+import { ProfileSkeleton } from "@/components/profile/ProfileSkeleton";
 import { useAuth } from "@/lib/auth";
 import { ProfileContainerProps, RenderProfileData, UserProfile } from "@/lib/types";
 import { Button } from "@/components/ui/button";

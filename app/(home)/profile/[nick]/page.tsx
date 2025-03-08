@@ -1,7 +1,7 @@
 'use client'
 
 import React from "react";
-import { ProfileContainer } from "@/components/ProfileContainer";
+import { ProfileContainer } from "@/components/profile/ProfileContainer";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -19,12 +19,14 @@ import {
 } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
-import { EditProfileForm } from "@/components/EditProfileForm";
-import { AvatarEdit } from "@/components/AvatarEdit";
-import { CoverImageEdit } from "@/components/CoverImageEdit";
+import { EditProfileForm } from "@/components/profile/EditProfileForm";
+import { AvatarEdit } from "@/components/profile/AvatarEdit";
+import { CoverImageEdit } from "@/components/profile/CoverImageEdit";
 import { format, parseISO } from "date-fns";
 import { es } from "date-fns/locale";
-import { Tag } from "@/components/Tag";
+import { Tag } from "@/components/common/Tag";
+import { AuthorAvatar } from "@/components/common/AuthorAvatar";
+import { getAvatarUrl } from "@/lib/utils";
 import { useParams } from "next/navigation";
 
 export default function ProfilePage() {
@@ -66,7 +68,7 @@ export default function ProfilePage() {
                   <div className="flex flex-col sm:flex-row items-center sm:items-end sm:-mt-24 relative z-10 px-4 sm:px-6">
                     <div className="relative group">
                       <Avatar className="w-24 h-24 sm:w-32 sm:h-32 border-4 border-background shadow-lg">
-                        <AvatarImage src={profile.avatar} alt={profile.name} />
+                        <AvatarImage src={getAvatarUrl(profile.avatar)} alt={profile.name} />
                         <AvatarFallback>{profile.name.charAt(0)}</AvatarFallback>
                       </Avatar>
                       {canEdit && (
@@ -208,10 +210,7 @@ export default function ProfilePage() {
                                 </h3>
                                 <p className="text-sm mt-1">{post.excerpt}</p>
                                 <div className="flex items-center mt-2">
-                                  <Avatar className="w-6 h-6 mr-2">
-                                    <AvatarImage src={post.author.avatar} alt={post.author.name} />
-                                    <AvatarFallback>{post.author.name.charAt(0)}</AvatarFallback>
-                                  </Avatar>
+                                  <AuthorAvatar author={post.author} className="w-6 h-6 mr-2" />
                                   <span className="text-xs">{post.author.name}</span>
                                   <span className="text-xs mx-2">•</span>
                                   <span className="text-xs">{post.publishDate}</span>

@@ -140,7 +140,7 @@ export const useAuth = create<AuthState>()(
           }
 
           // 🔥 Refrescar el avatar en el estado de Zustand con un nuevo timestamp
-          const newAvatarUrl = `${process.env.NEXT_PUBLIC_CLOUDFRONT_DOMAIN}/${user.id}-${Date.now()}.png`
+          const newAvatarUrl = `${process.env.NEXT_PUBLIC_CLOUDFRONT_DOMAIN}/${user.userId}-${Date.now()}.png`
           setUser({ ...user, avatar: newAvatarUrl })
 
         } catch (error) {

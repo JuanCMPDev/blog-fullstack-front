@@ -8,6 +8,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Button } from "@/components/ui/button"
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar"
 import { Upload, Pencil } from "lucide-react"
+import { getAvatarUrl } from "@/lib/utils"
 
 interface AvatarEditProps {
   currentAvatar: string
@@ -18,6 +19,9 @@ interface AvatarEditProps {
 export function AvatarEdit({ currentAvatar, onAvatarChange, handleAvatarUpdate }: AvatarEditProps) {
   const [isOpen, setIsOpen] = useState(false)
   const [newAvatar, setNewAvatar] = useState<string | null>(null)
+
+  // Convertir el avatar actual a URL de CloudFront
+  const avatarUrl = getAvatarUrl(currentAvatar)
 
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0]
@@ -66,7 +70,7 @@ export function AvatarEdit({ currentAvatar, onAvatarChange, handleAvatarUpdate }
                     onClick={handleAvatarClick}
                   >
                     <Avatar className="w-32 h-32 sm:w-40 sm:h-40">
-                      <AvatarImage src={newAvatar || currentAvatar} />
+                      <AvatarImage src={newAvatar || avatarUrl} />
                       <AvatarFallback>Avatar</AvatarFallback>
                     </Avatar>
                     <div className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300 rounded-full">

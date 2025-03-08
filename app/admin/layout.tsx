@@ -1,5 +1,5 @@
 import { AdminSidebar } from "@/components/admin/AdminSidebar"
-import { ProtectedRoute } from "@/components/ProtectedRoute"
+import { ProtectedRoute } from "@/components/auth/ProtectedRoute"
 
 export default function AdminLayout({
   children,

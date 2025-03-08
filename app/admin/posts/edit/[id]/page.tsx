@@ -14,7 +14,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Skeleton } from "@/components/ui/skeleton"
 import type { Post } from "@/lib/types"
-import { usePost } from "@/lib/hooks/usePost"
+import { usePost } from "@/hooks/use-posts"
 
 export default function EditPostPage() {
   const params = useParams()

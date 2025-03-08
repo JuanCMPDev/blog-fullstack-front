@@ -10,14 +10,16 @@ import { ThumbsUp, MessageCircle, Bookmark, Calendar, Clock, Settings } from "lu
 import { Button } from "@/components/ui/button"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Skeleton } from "@/components/ui/skeleton"
-import { CodeBlock } from "@/components/CodeBlock"
-import { Comments } from "@/components/Comments"
-import { mockPosts } from "@/lib/mock-posts"
+import { Comments } from "@/components/blog/Comments"
 import { useAuth } from "@/lib/auth"
-import { Tag } from "@/components/Tag"
-import { ShareMenu } from "@/components/ShareMenu"
+import { Tag } from "@/components/common/Tag"
+import { ShareMenu } from "@/components/blog/ShareMenu"
 import type { Post } from "@/lib/types"
 import { useToast } from "@/hooks/use-toast"
+import { customFetch } from "@/lib/customFetch"
+import { getAvatarUrl } from "@/lib/utils"
+import { Prism as SyntaxHighlighter } from "react-syntax-highlighter"
+import { tomorrow } from "react-syntax-highlighter/dist/esm/styles/prism"
 
 const mockComments = [
   {
@@ -48,7 +50,7 @@ const mockComments = [
 ]
 
 export default function PostPage() {
-  const { id } = useParams()
+  const { slug } = useParams()
   const [post, setPost] = useState<Post | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const router = useRouter()
@@ -57,35 +59,153 @@ export default function PostPage() {
   const { toast } = useToast()
 
   useEffect(() => {
-    const fetchPost = () => {
+    const fetchPost = async () => {
       setIsLoading(true)
-      const foundPost = mockPosts.find((p) => p.id === Number(id))
-      if (foundPost) {
-        setPost(foundPost)
-      } else {
+      try {
+        const slugValue = Array.isArray(slug) ? slug[0] : slug
+        
+        // Asegurarse de que la URL no tenga barras duplicadas
+        let apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'
+        // Eliminar la barra final si existe
+        if (apiUrl.endsWith('/')) {
+          apiUrl = apiUrl.slice(0, -1)
+        }
+        const endpoint = `${apiUrl}/posts/slug/${slugValue}`
+        
+        const response = await customFetch(endpoint)
+        
+        if (!response.ok) {
+          if (response.status === 404) {
+            router.push("/404")
+            return
+          }
+          throw new Error(`Error al cargar el post: ${response.statusText}`)
+        }
+        
+        const postData = await response.json()
+        setPost(postData)
+      } catch (error) {
+        console.error('Error al obtener el post:', error)
+        toast({
+          title: "Error",
+          description: "No se pudo cargar el post. Intente nuevamente.",
+          variant: "destructive",
+        })
         router.push("/404")
+      } finally {
+        setIsLoading(false)
       }
-      setIsLoading(false)
     }
 
-    fetchPost()
-  }, [id, router])
+    if (slug) {
+      fetchPost()
+    }
+  }, [slug, router, toast])
 
   const renderContent = (content: string) => {
-    const parser = new DOMParser()
-    const doc = parser.parseFromString(content, "text/html")
-
-    const elements = Array.from(doc.body.childNodes).map((node, index) => {
-      if (node.nodeName === "PRE" && node.firstChild?.nodeName === "CODE") {
-        const code = node.textContent || ""
-        const language = (node.firstChild as HTMLElement).className.replace("language-", "")
-        return <CodeBlock key={index} language={language} value={code} />
+    // Detectar y extraer bloques de código de ReactQuill
+    const processCodeBlocks = () => {
+      const tempDiv = document.createElement('div');
+      tempDiv.innerHTML = content;
+      
+      // Encontrar todos los contenedores de bloques de código
+      const codeContainers = tempDiv.querySelectorAll('.ql-code-block-container');
+      
+      codeContainers.forEach(container => {
+        // Obtener todos los bloques de código dentro del contenedor
+        const codeBlocks = container.querySelectorAll('.ql-code-block');
+        if (codeBlocks.length === 0) return;
+        
+        // Determinar el lenguaje desde el primer bloque (si está disponible)
+        let language = 'javascript'; // Valor por defecto
+        const firstBlock = codeBlocks[0];
+        const langAttr = firstBlock.getAttribute('data-language');
+        
+        if (langAttr && langAttr !== 'plain') {
+          language = langAttr;
+        } else {
+          // Intenta detectar lenguajes comunes desde la primera línea
+          const firstLine = firstBlock.textContent || '';
+          if (firstLine.includes('function') || firstLine.includes('const') || firstLine.includes('let')) {
+            language = 'javascript';
+          } else if (firstLine.includes('class') || firstLine.includes('import')) {
+            language = 'typescript';
+          } else if (firstLine.includes('<div') || firstLine.includes('<span')) {
+            language = 'html';
+          } else if (firstLine.includes('.class') || firstLine.includes('#id')) {
+            language = 'css';
+          }
+        }
+        
+        // Extraer y combinar todo el código de los bloques
+        let combinedCode = '';
+        codeBlocks.forEach(block => {
+          combinedCode += block.textContent + '\n';
+        });
+        
+        // Crear un nuevo elemento para el resaltador de sintaxis
+        const syntaxDiv = document.createElement('div');
+        syntaxDiv.className = 'syntax-highlighter-wrapper';
+        syntaxDiv.setAttribute('data-language', language);
+        syntaxDiv.textContent = combinedCode;
+        
+        // Reemplazar el contenedor original con nuestro nuevo div
+        container.parentNode?.replaceChild(syntaxDiv, container);
+      });
+      
+      return tempDiv.innerHTML;
+    };
+    
+    // Extraer áreas de código para renderizarlas por separado
+    const processedHtml = processCodeBlocks();
+    
+    // Dividir el HTML para procesar las partes con y sin resaltado de sintaxis
+    const parts = processedHtml.split(/<div class="syntax-highlighter-wrapper" data-language="([^"]+)">([\s\S]*?)<\/div>/g);
+    
+    // Renderizar el contenido HTML con los bloques de código procesados
+    const renderedParts = [];
+    for (let i = 0; i < parts.length; i++) {
+      if (i % 3 === 0) {
+        // Contenido HTML normal
+        if (parts[i]) {
+          renderedParts.push(
+            <div key={`html-${i}`} dangerouslySetInnerHTML={{ __html: parts[i] }} />
+          );
+        }
+      } else if (i % 3 === 1) {
+        // Lenguaje de programación
+        const language = parts[i];
+        const code = parts[i + 1] || '';
+        
+        renderedParts.push(
+          <SyntaxHighlighter
+            key={`code-${i}`}
+            language={language}
+            style={tomorrow}
+            showLineNumbers
+            wrapLines
+            customStyle={{
+              margin: '1em 0',
+              borderRadius: '0.5rem',
+              fontSize: '0.9rem',
+              lineHeight: '1.5',
+            }}
+          >
+            {code}
+          </SyntaxHighlighter>
+        );
+        
+        // Saltarse el siguiente elemento (que ya procesamos)
+        i++;
       }
-      return <div key={index} dangerouslySetInnerHTML={{ __html: node instanceof Element ? node.outerHTML : "" }} />
-    })
-
-    return elements
-  }
+    }
+    
+    return (
+      <div className="prose prose-lg dark:prose-invert max-w-none mb-8">
+        {renderedParts}
+      </div>
+    );
+  };
 
   const scrollToComments = () => {
     if (!user) {
@@ -144,7 +264,7 @@ export default function PostPage() {
         <h1 className="text-3xl sm:text-4xl font-bold mb-4">{post.title}</h1>
         <div className="flex items-center space-x-4 mb-6">
           <Avatar className="w-10 h-10">
-            <AvatarImage src={post.author.avatar} alt={post.author.name} />
+            <AvatarImage src={getAvatarUrl(post.author.avatar)} alt={post.author.name} />
             <AvatarFallback>{post.author.name.charAt(0)}</AvatarFallback>
           </Avatar>
           <div>
@@ -163,7 +283,7 @@ export default function PostPage() {
             <Tag key={index} name={tag} />
           ))}
         </div>
-        <div className="prose prose-lg dark:prose-invert max-w-none mb-8">{renderContent(post.content)}</div>
+        {renderContent(post.content)}
         <div className="flex items-center justify-between border-t border-b py-4 mb-8 bg-background/90">
           <div className="flex items-center space-x-2 sm:space-x-4">
             <Button variant="ghost" size="sm" className="text-xs sm:text-sm px-2 sm:px-3" onClick={handleLike}>

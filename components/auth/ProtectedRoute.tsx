@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 import { useAuth } from "@/lib/auth"
-import { LoadingSpinner } from "@/components/LoadingSpinner"
+import { LoadingSpinner } from "@/components/common/LoadingSpinner"
 import type React from "react"
 import { ProtectedRouteProps } from "@/lib/types"
 

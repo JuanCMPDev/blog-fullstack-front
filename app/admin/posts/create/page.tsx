@@ -1,7 +1,7 @@
 "use client"
 
 import { useCreatePost } from '@/hooks/use-create-post'
-import CreatePostForm from '@/components/CreatePostForm'
+import CreatePostForm from '@/components/blog/CreatePostForm'
 
 export default function CreatePostPage() {
   const {

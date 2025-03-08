@@ -5,8 +5,8 @@ import { useSearchParams } from "next/navigation"
 import { motion } from "framer-motion"
 import Link from "next/link"
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/components/ui/card"
-import { RequestResetPassword } from "@/components/RequestResetPassword"
-import { ResetPasswordForm } from "@/components/ResetPasswordForm"
+import { RequestResetPassword } from "@/components/auth/RequestResetPassword"
+import { ResetPasswordForm } from "@/components/auth/ResetPasswordForm"
 
 export default function ResetPassword() {
   const searchParams = useSearchParams()
