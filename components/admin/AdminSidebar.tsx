@@ -39,36 +39,49 @@ export function AdminSidebar() {
   const [openItems, setOpenItems] = useState<string[]>([])
   const { user } = useAuth()
 
+  // Logs para depuración
+  console.log("AdminSidebar - user:", user);
+  console.log("AdminSidebar - role:", user?.role);
+  console.log("AdminSidebar - roleAsString:", user?.roleAsString);
+
   useEffect(() => {
     setMounted(true)
   }, [])
 
   const sidebarNavItems: NavItem[] = useMemo(
-    () => [
-      {
-        title: "Dashboard",
-        href: "/admin",
-        icon: Dashboard,
-      },
-      ...(user?.role === "admin"
-        ? [
-            {
-              title: "Usuarios",
-              icon: Users,
-              subItems: [{ title: "Administrar Usuarios", href: "/admin/users", icon: UserPlus }],
-            },
-          ]
-        : []),
-      {
-        title: "Posts",
-        icon: FileText,
-        subItems: [
-          { title: "Crear Post", href: "/admin/posts/create", icon: PenSquare },
-          { title: "Administrar Posts", href: "/admin/posts", icon: ListTodo },
-        ],
-      },
-    ],
-    [user?.role],
+    () => {
+      // Obtener el rol como string para comparar
+      const role = user?.roleAsString || user?.role;
+      console.log("AdminSidebar - role para comparación:", role);
+      console.log("AdminSidebar - es admin?:", role === "admin");
+      
+      return [
+        {
+          title: "Dashboard",
+          href: "/admin",
+          icon: Dashboard,
+        },
+        // Verificar si el usuario es admin usando el role como string
+        ...(role === "admin"
+          ? [
+              {
+                title: "Usuarios",
+                icon: Users,
+                subItems: [{ title: "Administrar Usuarios", href: "/admin/users", icon: UserPlus }],
+              },
+            ]
+          : []),
+        {
+          title: "Posts",
+          icon: FileText,
+          subItems: [
+            { title: "Crear Post", href: "/admin/posts/create", icon: PenSquare },
+            { title: "Administrar Posts", href: "/admin/posts", icon: ListTodo },
+          ],
+        },
+      ];
+    },
+    [user?.role, user?.roleAsString], // Incluir roleAsString como dependencia
   )
 
   if (!mounted) {
@@ -194,4 +207,3 @@ export function AdminSidebar() {
     </motion.div>
   )
 }
-

@@ -1,5 +1,5 @@
 import { create } from "zustand"
-import { persist } from "zustand/middleware"
+import { persist, createJSONStorage } from "zustand/middleware"
 import { AuthState, UserProfile, UserRole } from "@/lib/types"
 import { decodeJwt } from "jose"
 
@@ -60,19 +60,55 @@ export const useAuth = create<AuthState>()(
           }
           const userData = await userResponse.json()
 
-          const roleMapping: Record<string, UserRole> = {
-            "user": UserRole.User,
-            "admin": UserRole.Admin,
-            "editor": UserRole.Editor,
+          // Extraer el role directamente del JWT
+          const jwtRole = decoded.role.toLowerCase()
+          console.log("Decoded JWT role:", jwtRole);
+          
+          // Convertir string a enum para la asignaciu00f3n de tipo
+          const roleEnum = 
+            jwtRole === "admin" ? UserRole.Admin : 
+            jwtRole === "editor" ? UserRole.Editor : 
+            UserRole.User;
+          
+          console.log("Role como enum:", roleEnum, "Tipo:", typeof roleEnum);
+          
+          // Crear objeto completo con todas las propiedades, guardando el role como string y como enum
+          const user: UserProfile = {
+            userId: userData.userId || decoded.id,
+            name: userData.name || "",
+            bio: userData.bio || "",
+            email: userData.email || "",
+            nick: userData.nick || "",
+            avatar: userData.avatar || "",
+            coverImage: userData.coverImage || "",
+            location: userData.location || "",
+            joinDate: userData.joinDate || new Date().toISOString(),
+            socialLinks: userData.socialLinks || {},
+            skills: userData.skills || [],
+            role: roleEnum,
+            roleAsString: jwtRole
+          };
+          
+          console.log("Usuario completo:", JSON.stringify(user));
+          
+          // Prueba directa
+          try {
+            localStorage.setItem('direct-test', JSON.stringify({ 
+              roleEnum,
+              roleAsString: jwtRole,
+              // Usamos la propiedad correcta del enum
+              roleEnumValue: roleEnum,
+              check: { role: roleEnum }
+            }));
+            const test = JSON.parse(localStorage.getItem('direct-test') || '{}');
+            console.log("Prueba directa:", test);
+          } catch (e) {
+            console.error("Error en prueba directa:", e);
           }
-          const normalizedRole = roleMapping[(decoded.role as string).toLocaleLowerCase()]
-          const normalizedUser: UserProfile = {
-            ...userData,
-            role: normalizedRole,
-          }
-
+          
+          // Actualizar el estado con todas las propiedades
           set({
-            user: normalizedUser,
+            user,
             accessToken,
             isLoading: false,
           })
@@ -100,7 +136,38 @@ export const useAuth = create<AuthState>()(
           const refreshData = await refreshResponse.json()
           const newAccessToken = refreshData.accessToken
 
-          set({ accessToken: newAccessToken }) // 🔥 Actualiza el estado global de Zustand
+          // Decodificar el token para extraer el role
+          const decoded = decodeJwt(newAccessToken) as JWTPayload
+          const jwtRole = decoded.role.toLowerCase()
+          
+          console.log("JWT Role en refresh:", jwtRole);
+          
+          // Convertir el string a enum para tipo
+          const roleEnum = 
+            jwtRole === "admin" ? UserRole.Admin : 
+            jwtRole === "editor" ? UserRole.Editor : 
+            UserRole.User;
+
+          console.log("Role como enum en refresh:", roleEnum);
+          
+          // Actualizar el token y el role del usuario
+          const { user } = get()
+          if (user) {
+            // Actualizar el usuario con ambas propiedades de role
+            const updatedUser: UserProfile = {
+              ...user,
+              role: roleEnum,           // Para tipado correcto
+              roleAsString: jwtRole     // Para persistencia
+            };
+            
+            console.log("Usuario actualizado con role:", updatedUser);
+            
+            // Actualizar el estado
+            set({ 
+              user: updatedUser,
+              accessToken: newAccessToken,
+            })
+          }
         } catch (error) {
           console.error("Error refreshing token:", error)
           set({ user: null, accessToken: null })
@@ -148,11 +215,55 @@ export const useAuth = create<AuthState>()(
         }
       },
 
-      isAdmin: () => get().user?.role.toLowerCase() === "admin",
-      isEditor: () => get().user?.role.toLowerCase() === "editor",
+      isAdmin: () => {
+        const user = get().user;
+        if (!user) return false;
+        
+        // Usamos roleAsString para comparaciones directas
+        const role = user.roleAsString || (user.role === UserRole.Admin ? "admin" : "");
+        console.log("Role en isAdmin:", role);
+        return role === "admin";
+      },
+      isEditor: () => {
+        const user = get().user;
+        if (!user) return false;
+        
+        // Usamos roleAsString para comparaciones directas
+        const role = user.roleAsString || (user.role === UserRole.Editor ? "editor" : "");
+        console.log("Role en isEditor:", role);
+        return role === "editor";
+      },
     }),
     {
       name: "auth-storage",
+      storage: createJSONStorage(() => localStorage),
+      partialize: (state) => {
+        console.log("Persistiendo estado:", state);
+        return {
+          user: state.user ? {
+            ...state.user,
+            // Asegurarse de que role y roleAsString se guardan correctamente
+            role: state.user.roleAsString, // Guardar el role como string en localStorage
+            roleAsString: state.user.roleAsString
+          } : null,
+          accessToken: state.accessToken
+        };
+      },
+      onRehydrateStorage: () => (state) => {
+        // Cuando se recarga la pu00e1gina y se restaura el estado desde localStorage
+        console.log("Estado rehidratado:", state);
+        if (state && state.user && state.user.roleAsString) {
+          // Convertir de nuevo el string a enum
+          const roleEnum = 
+            state.user.roleAsString === "admin" ? UserRole.Admin : 
+            state.user.roleAsString === "editor" ? UserRole.Editor : 
+            UserRole.User;
+          
+          // Actualizar el usuario con el enum correcto
+          state.user.role = roleEnum;
+          console.log("Usuario rehidratado con role corregido:", state.user);
+        }
+      }
     }
   )
 )

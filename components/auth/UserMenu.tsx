@@ -20,6 +20,10 @@ export function UserMenu({ user }: UserMenuProps) {
   const menuRef = useRef<HTMLDivElement>(null)
   const { logout } = useAuth()
 
+  // Logs para verificar el role
+  console.log("UserMenu recibió user:", user);
+  console.log("UserMenu role:", user.role);
+
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
       if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
@@ -36,10 +40,18 @@ export function UserMenu({ user }: UserMenuProps) {
   const menuItems = [
     { icon: UserCircle, label: "Perfil", href: `/profile/${user.nick}` },
     { icon: Settings, label: "Configuración", href: "/settings" },
+    // Asegurarse de que la condición funcione comprobando directamente con el string
     ...(user.role === "admin" || user.role === "editor"
-      ? [{ icon: LayoutDashboard, label: "Dashboard", href: "/admin" }]
+      ? [{ 
+          icon: LayoutDashboard, 
+          label: "Dashboard", 
+          href: "/admin" 
+        }]
       : []),
   ]
+
+  console.log("¿Mostrar Dashboard?:", user.role === "admin" || user.role === "editor");
+  console.log("Menu items:", menuItems);
 
   return (
     <div className="relative" ref={menuRef}>
@@ -102,4 +114,3 @@ export function UserMenu({ user }: UserMenuProps) {
     </div>
   )
 }
-

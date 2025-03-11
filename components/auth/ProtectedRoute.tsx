@@ -63,9 +63,23 @@ export function ProtectedRoute({ children, allowedRoles }: ProtectedRouteProps) 
   useEffect(() => {
     // Solo redirigimos cuando no estamos verificando ni cargando
     // y sabemos con certeza que el usuario no tiene acceso
-    if (!isVerifying && !isLoading && (!user || !allowedRoles.includes(user.role))) {
-      console.log("Redireccionando a home por falta de permisos...");
-      router.push("/");
+    if (!isVerifying && !isLoading) {
+      if (!user) {
+        console.log("No hay usuario autenticado, redirigiendo...");
+        router.push("/");
+        return;
+      }
+      
+      // Usar roleAsString para la comparación si está disponible, o role como fallback
+      const userRole = user.roleAsString || user.role;
+      console.log("Rol del usuario:", userRole);
+      console.log("Roles permitidos:", allowedRoles);
+      console.log("¿Tiene acceso?:", allowedRoles.includes(userRole));
+      
+      if (!allowedRoles.includes(userRole)) {
+        console.log("Redireccionando a home por falta de permisos...");
+        router.push("/");
+      }
     }
   }, [user, isLoading, router, allowedRoles, isVerifying]);
 
@@ -80,11 +94,16 @@ export function ProtectedRoute({ children, allowedRoles }: ProtectedRouteProps) 
   }
 
   // Si el usuario no tiene permisos, no renderizar nada mientras redirige
-  if (!user || !allowedRoles.includes(user.role)) {
+  if (!user) {
+    return null;
+  }
+  
+  // Usar roleAsString para la comparación si está disponible, o role como fallback
+  const userRole = user.roleAsString || user.role;
+  if (!allowedRoles.includes(userRole)) {
     return null;
   }
 
   // Si el usuario tiene permisos, mostrar el contenido protegido
   return <>{children}</>;
 }
-

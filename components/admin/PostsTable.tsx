@@ -187,7 +187,7 @@ export function PostsTable({ posts, onDelete, onEdit, onStatusChange, isLoading 
                       <TableCell>
                         <div className="flex items-center space-x-2">
                           <AuthorAvatar author={post.author} className="h-8 w-8" />
-                          <span>{post.author.name}</span>
+                          <span>{post.author?.name || 'Usuario desconocido'}</span>
                         </div>
                       </TableCell>
                       <TableCell>
@@ -328,4 +328,3 @@ export function PostsTable({ posts, onDelete, onEdit, onStatusChange, isLoading 
     </>
   )
 }
-

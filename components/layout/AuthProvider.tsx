@@ -3,6 +3,7 @@
 import { ReactNode, useEffect, useCallback } from "react";
 import { useAuth } from "@/lib/auth";
 import { customFetch } from "@/lib/customFetch";
+import { UserRole } from "@/lib/types";
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const refreshAccessToken = useAuth((state) => state.refreshAccessToken);
@@ -16,8 +17,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (!user || !accessToken) return;
     
     try {
+      // Usar el endpoint específico para estado del usuario que incluye info de ban y rol
       const response = await customFetch(
-        `${process.env.NEXT_PUBLIC_API_URL}profile/${user.userId}`,
+        `${process.env.NEXT_PUBLIC_API_URL}auth/user-status`,
         {
           method: "GET",
           headers: {
@@ -28,9 +30,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       );
       
       if (!response.ok) {
-        // Si el usuario no existe o está baneado, cerramos sesión
-        if (response.status === 403 || response.status === 404) {
-          console.log("Usuario no disponible o baneado, cerrando sesión...");
+        // Si hay algún problema con la autenticación, cerramos sesión
+        if (response.status === 401 || response.status === 403) {
+          console.log("Sesión inválida, cerrando sesión...");
           logout();
         }
         return;
@@ -38,13 +40,33 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       
       const userData = await response.json();
       
-      // Verificar si hay diferencias en el rol u otras propiedades importantes
-      if (userData.role !== user.role) {
+      // Verificar si el usuario está baneado
+      if (userData.isBanned) {
+        console.log("Usuario baneado, cerrando sesión...");
+        logout();
+        return;
+      }
+      
+      // Verificar si hay diferencias en el rol
+      if (userData.roleAsString !== user.roleAsString) {
         console.log("Cambios detectados en el rol del usuario, actualizando...");
-        setUser({
+        console.log("Rol actual:", user.roleAsString, "Nuevo rol:", userData.roleAsString);
+        
+        // Convertir roleAsString a enum UserRole para mantener el tipado
+        const roleEnum = 
+          userData.roleAsString.toLowerCase() === "admin" ? UserRole.Admin : 
+          userData.roleAsString.toLowerCase() === "editor" ? UserRole.Editor : 
+          UserRole.User;
+        
+        // Solo actualizamos las propiedades relacionadas con el rol
+        const updatedUser = {
           ...user,
-          role: userData.role
-        });
+          role: roleEnum,
+          roleAsString: userData.roleAsString
+        };
+        
+        // Realizar la actualización
+        setUser(updatedUser);
       }
     } catch (error) {
       console.error("Error al verificar estado del usuario:", error);

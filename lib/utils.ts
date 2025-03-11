@@ -10,7 +10,12 @@ export function cn(...inputs: ClassValue[]) {
  * @param avatarPath Ruta relativa del avatar (ej: "avatars/123-456.webp")
  * @returns URL completa de CloudFront para el avatar
  */
-export function getAvatarUrl(avatarPath: string): string {
+export function getAvatarUrl(avatarPath?: string | null): string {
+  // Si no hay avatar, devolver imagen predeterminada
+  if (!avatarPath) {
+    return '/placeholder-user.jpg';
+  }
+  
   // Si la ruta ya comienza con http, asumimos que ya es una URL completa
   if (avatarPath.startsWith('http')) {
     return avatarPath;

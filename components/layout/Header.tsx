@@ -21,7 +21,9 @@ export function Header() {
   const { user } = useAuth(); // Estado global del usuario
   const router = useRouter();
 
-  console.log("user:", user?.role)
+  console.log("user en Header:", user);
+  console.log("user role en Header:", user?.role);
+  console.log("user roleAsString en Header:", user?.roleAsString);
   
   useEffect(() => {
     setMounted(true);
@@ -128,7 +130,14 @@ export function Header() {
 
             {user ? (
               <div className="hidden md:inline-flex">
-                <UserMenu user={user} />
+                {/* Asegurarse de pasar usuario completo con role y roleAsString */}
+                <UserMenu user={{
+                  name: user.name,
+                  email: user.email,
+                  avatar: user.avatar,
+                  nick: user.nick,
+                  role: user.roleAsString || user.role, // Usar roleAsString si disponible, sino role
+                }} />
               </div>
             ) : (
               <div className="hidden md:flex space-x-2">

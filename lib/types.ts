@@ -179,6 +179,7 @@ export interface UserProfile {
   email: string
   nick: string
   role: UserRole
+  roleAsString?: string
   avatar: string
   coverImage: string
   location: string
