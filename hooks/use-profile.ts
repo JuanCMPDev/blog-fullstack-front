@@ -3,51 +3,12 @@ import { useState, useEffect } from "react";
 import type { UserProfile, Post, UseProfileReturn } from "@/lib/types";
 import { useAuth } from "@/lib/auth";
 import { customFetch } from "@/lib/customFetch";
+import { useSavedPosts } from "./use-saved-posts";
+import { getPosts } from "@/lib/services/postService";
+import { useActivities } from "./use-activities";
 
-// Mocked saved posts data
-const mockSavedPosts: Post[] = [
-  {
-    id: 1,
-    title: "Introducción a React Hooks",
-    excerpt:
-      "Aprende a usar los Hooks más comunes en React y cómo pueden simplificar tu código.",
-    coverImage: "/placeholder-post-image.jpeg",
-    date: "2023-05-15",
-    publishDate: "2023-05-15",
-    readTime: 10,
-    content: "Aquí iría el contenido del post...",
-    author: {
-      id: "1",
-      name: "Jane Smith",
-      avatar: "/placeholder-avatar.jpeg",
-    },
-    likes: 25,
-    comments: 8,
-    image: "/placeholder-post-image.jpeg",
-    tags: ["React", "Hooks", "JavaScript"],
-  },
-  {
-    id: 2,
-    title: "Optimización de rendimiento en React",
-    excerpt:
-      "Descubre técnicas avanzadas para mejorar el rendimiento de tus aplicaciones React.",
-    coverImage: "/placeholder-post-image.jpeg",
-    date: "2023-06-01",
-    publishDate: "2023-06-01",
-    readTime: 15,
-    content: "Aquí iría el contenido del post...",
-    author: {
-      id: "2",
-      name: "Bob Johnson",
-      avatar: "/placeholder-avatar.jpeg",
-    },
-    likes: 32,
-    comments: 12,
-    image: "/placeholder-post-image.jpeg",
-    tags: ["React", "Performance", "Optimization"],
-  },
-  // Puedes añadir más posts mock si lo deseas
-];
+// Eliminar los datos mock ya que usaremos datos reales
+// const mockSavedPosts: Post[] = [...]; (Eliminar todo el array mock)
 
 export const useProfile = (nick: string | undefined): UseProfileReturn => {
   const [profile, setProfile] = useState<UserProfile | null>(null);
@@ -56,7 +17,18 @@ export const useProfile = (nick: string | undefined): UseProfileReturn => {
   const [error, setError] = useState<string | null>(null);
 
   const { accessToken, setUser, user } = useAuth();
+  const { savedPostIds, loadSavedPostIds } = useSavedPosts();
+  const { 
+    activities, 
+    isLoading: isLoadingActivities,
+    error: activitiesError,
+    loadMore: loadMoreActivities,
+    goToPage: goToActivityPage,
+    hasMore: hasMoreActivities,
+    pagination: activitiesPagination
+  } = useActivities(nick);
 
+  // Efecto para cargar el perfil del usuario
   useEffect(() => {
     let isMounted = true;
     
@@ -77,8 +49,6 @@ export const useProfile = (nick: string | undefined): UseProfileReturn => {
         const userData = await response.json();
         if (isMounted) {
           setProfile(userData);
-          // Se asignan los mock de posts mientras no tengas endpoint real para ellos.
-          setSavedPosts(mockSavedPosts);
           setError(null);
         }
       } catch (err) {
@@ -95,6 +65,49 @@ export const useProfile = (nick: string | undefined): UseProfileReturn => {
       isMounted = false;
     };
   }, [nick, accessToken]);
+
+  // Efecto para cargar los posts guardados cuando hay un cambio en savedPostIds
+  useEffect(() => {
+    // Comprobar si este perfil pertenece al usuario actual
+    const isCurrentUser = user && nick === user.nick;
+    
+    // Solo cargamos los posts guardados si es el perfil del usuario actual
+    if (isCurrentUser && savedPostIds.length > 0) {
+      const fetchSavedPosts = async () => {
+        try {
+          setIsLoading(true);
+          
+          // Obtener todos los posts (esto es temporal, idealmente haría una petición específica por IDs)
+          const response = await getPosts(1, 50); // Obtenemos una cantidad razonable de posts
+          
+          // Filtrar los posts que están en savedPostIds
+          const filteredPosts = response.data.filter(post => 
+            savedPostIds.includes(post.id)
+          );
+          
+          setSavedPosts(filteredPosts);
+        } catch (error) {
+          console.error("Error al cargar los posts guardados:", error);
+          setSavedPosts([]);
+        } finally {
+          setIsLoading(false);
+        }
+      };
+      
+      fetchSavedPosts();
+    } else if (isCurrentUser) {
+      // Si el usuario no tiene posts guardados, establecemos un array vacío
+      setSavedPosts([]);
+    }
+  }, [savedPostIds, nick, user]);
+
+  // Efecto para cargar los IDs de posts guardados cuando se carga el perfil
+  useEffect(() => {
+    // Solo cargamos los IDs de posts guardados si es el perfil del usuario actual
+    if (user && nick === user.nick) {
+      loadSavedPostIds();
+    }
+  }, [user, nick, loadSavedPostIds]);
 
   const updateProfile = async (updatedProfile: UserProfile): Promise<UserProfile | null> => {
     setIsLoading(true);
@@ -228,5 +241,21 @@ export const useProfile = (nick: string | undefined): UseProfileReturn => {
     }
   };
 
-  return { profile, savedPosts, isLoading, error, updateProfile, updateAvatar, updateCoverImage, fetchProfile };
+  return { 
+    profile, 
+    savedPosts, 
+    activities,
+    isLoading, 
+    isLoadingActivities,
+    error, 
+    activitiesError,
+    updateProfile, 
+    updateAvatar, 
+    updateCoverImage, 
+    fetchProfile,
+    loadMoreActivities,
+    goToActivityPage,
+    hasMoreActivities,
+    activitiesPagination
+  };
 };

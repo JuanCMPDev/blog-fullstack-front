@@ -20,10 +20,6 @@ export function Header() {
   const pathname = usePathname();
   const { user } = useAuth(); // Estado global del usuario
   const router = useRouter();
-
-  console.log("user en Header:", user);
-  console.log("user role en Header:", user?.role);
-  console.log("user roleAsString en Header:", user?.roleAsString);
   
   useEffect(() => {
     setMounted(true);

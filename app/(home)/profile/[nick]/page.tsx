@@ -16,6 +16,7 @@ import {
   Bookmark,
   Activity,
   Heart,
+  MessageCircle,
 } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
@@ -27,12 +28,16 @@ import { es } from "date-fns/locale";
 import { Tag } from "@/components/common/Tag";
 import { AuthorAvatar } from "@/components/common/AuthorAvatar";
 import { getAvatarUrl } from "@/lib/utils";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
+import { useAuth } from "@/lib/auth";
+import { ActivityPagination } from "@/components/profile/ActivityPagination";
 
 export default function ProfilePage() {
 
   const params = useParams()
   const userNick = typeof params?.nick === "string" ? params.nick : undefined;
+  const router = useRouter();
+  const { user } = useAuth();
 
   return (
     <div className="min-h-screen bg-dot-pattern">
@@ -42,9 +47,13 @@ export default function ProfilePage() {
           render={({
             profile,
             savedPosts,
+            activities,
             isEditing,
             canEdit,
             handlers,
+            isLoading,
+            isLoadingActivities,
+            activitiesPagination,
           }) => (
             <>
               {/* Sección del perfil */}
@@ -191,46 +200,146 @@ export default function ProfilePage() {
                       </TabsTrigger>
                     </TabsList>
                     <TabsContent value="saved">
-                      {savedPosts.map((post) => (
-                        <div key={post.id} className="mb-6">
-                          <Link href={`/post/${post.id}`} className="group">
-                            <div className="flex flex-col sm:flex-row gap-4">
-                              <div className="relative w-full sm:w-24 h-40 sm:h-24 rounded-md overflow-hidden">
-                                <Image
-                                  src={post.coverImage || "/placeholder.svg"}
-                                  alt={post.title}
-                                  layout="fill"
-                                  objectFit="cover"
-                                  className="transition-transform group-hover:scale-110"
-                                />
-                              </div>
-                              <div className="flex-1">
-                                <h3 className="text-lg font-semibold group-hover:text-primary">
-                                  {post.title}
-                                </h3>
-                                <p className="text-sm mt-1">{post.excerpt}</p>
-                                <div className="flex items-center mt-2">
-                                  <AuthorAvatar author={post.author} className="w-6 h-6 mr-2" />
-                                  <span className="text-xs">{post.author.name}</span>
-                                  <span className="text-xs mx-2">•</span>
-                                  <span className="text-xs">{post.publishDate}</span>
+                      {isLoading ? (
+                        <div className="flex flex-col items-center py-8">
+                          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mb-4"></div>
+                          <p className="text-muted-foreground">Cargando posts guardados...</p>
+                        </div>
+                      ) : savedPosts.length > 0 ? (
+                        savedPosts.map((post) => (
+                          <div key={post.id} className="mb-6">
+                            <Link href={`/post/${post.slug || post.id}`} className="group">
+                              <div className="flex flex-col sm:flex-row gap-4">
+                                <div className="relative w-full sm:w-24 h-40 sm:h-24 rounded-md overflow-hidden">
+                                  <Image
+                                    src={post.coverImage || "/placeholder.svg"}
+                                    alt={post.title}
+                                    layout="fill"
+                                    objectFit="cover"
+                                    className="group-hover:scale-105 transition-transform duration-300"
+                                  />
+                                </div>
+                                <div className="flex-1">
+                                  <h3 className="text-lg font-medium group-hover:text-primary transition-colors">
+                                    {post.title}
+                                  </h3>
+                                  <p className="text-muted-foreground line-clamp-2">
+                                    {post.excerpt}
+                                  </p>
+                                  <div className="flex items-center mt-2 space-x-4">
+                                    <div className="flex items-center">
+                                      <AuthorAvatar author={post.author} className="h-5 w-5 mr-1.5" />
+                                      <span className="text-xs">{post.author?.name}</span>
+                                    </div>
+                                    <div className="flex items-center text-xs text-muted-foreground">
+                                      <Heart className="h-3 w-3 mr-1" />
+                                      {post.likes}
+                                    </div>
+                                  </div>
                                 </div>
                               </div>
-                            </div>
-                          </Link>
+                            </Link>
+                          </div>
+                        ))
+                      ) : (
+                        <div className="flex flex-col items-center justify-center py-12 px-4 text-center bg-muted/20 rounded-lg">
+                          <Bookmark className="h-12 w-12 text-muted-foreground mb-4" />
+                          <h3 className="text-lg font-medium mb-2">No hay posts guardados</h3>
+                          <p className="text-muted-foreground max-w-md">
+                            {profile.nick === user?.nick 
+                              ? "Aún no has guardado ningún post. Navega por el blog y guarda los posts que te interesen."
+                              : `${profile.name} aún no ha guardado ningún post.`
+                            }
+                          </p>
+                          {profile.nick === user?.nick && (
+                            <Button 
+                              variant="outline" 
+                              className="mt-4"
+                              onClick={() => router.push('/')}
+                            >
+                              Explorar posts
+                            </Button>
+                          )}
                         </div>
-                      ))}
+                      )}
                     </TabsContent>
                     <TabsContent value="activity">
-                      <div className="space-y-4">
-                        <div className="flex items-center space-x-4 p-4 bg-secondary/50 rounded-lg">
-                          <Heart className="w-5 h-5 text-primary" />
-                          <div>
-                            <p className="text-sm">Le gustó el post &quot;Introducción a React Hooks&quot;</p>
-                            <p className="text-xs text-muted-foreground">2023-07-20</p>
-                          </div>
+                      {isLoadingActivities && activities.length === 0 ? (
+                        <div className="flex flex-col items-center py-8">
+                          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mb-4"></div>
+                          <p className="text-muted-foreground">Cargando actividad reciente...</p>
                         </div>
-                      </div>
+                      ) : activities.length > 0 ? (
+                        <>
+                          <div className="space-y-4">
+                            {activities.map(activity => {
+                              // Crear un ícono según el tipo de actividad
+                              let ActivityIcon;
+                              switch (activity.type) {
+                                case "LIKED":
+                                  ActivityIcon = <Heart className="w-5 h-5 text-red-500" />;
+                                  break;
+                                case "COMMENTED":
+                                  ActivityIcon = <MessageCircle className="w-5 h-5 text-blue-500" />;
+                                  break;
+                                case "SAVED_POST":
+                                  ActivityIcon = <Bookmark className="w-5 h-5 text-amber-500" />;
+                                  break;
+                                case "POST_CREATED":
+                                  ActivityIcon = <Pencil className="w-5 h-5 text-green-500" />;
+                                  break;
+                                default:
+                                  ActivityIcon = <Activity className="w-5 h-5 text-primary" />;
+                              }
+                              
+                              return (
+                                <div key={activity.id} className="flex items-start space-x-4 p-4 bg-secondary/30 rounded-lg">
+                                  <div className="mt-1">{ActivityIcon}</div>
+                                  <div className="flex-1">
+                                    <p className="text-sm">{activity.description}</p>
+                                    <p className="text-xs text-muted-foreground mt-1">
+                                      {new Date(activity.createdAt).toLocaleDateString('es-ES', {
+                                        year: 'numeric',
+                                        month: 'long',
+                                        day: 'numeric',
+                                        hour: '2-digit',
+                                        minute: '2-digit'
+                                      })}
+                                    </p>
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
+                          
+                          {/* Componente de paginación */}
+                          <ActivityPagination 
+                            currentPage={activitiesPagination.page}
+                            totalPages={activitiesPagination.lastPage}
+                            totalItems={activitiesPagination.total}
+                            onPageChange={handlers.goToActivityPage}
+                            disabled={isLoadingActivities}
+                          />
+                          
+                          {/* Indicador de carga al cambiar de página */}
+                          {isLoadingActivities && (
+                            <div className="flex justify-center py-4">
+                              <div className="h-6 w-6 animate-spin rounded-full border-2 border-primary border-t-transparent"></div>
+                            </div>
+                          )}
+                        </>
+                      ) : (
+                        <div className="flex flex-col items-center justify-center py-12 px-4 text-center bg-muted/20 rounded-lg">
+                          <Activity className="h-12 w-12 text-muted-foreground mb-4" />
+                          <h3 className="text-lg font-medium mb-2">No hay actividad reciente</h3>
+                          <p className="text-muted-foreground max-w-md">
+                            {profile.nick === user?.nick 
+                              ? "Aún no has realizado ninguna actividad. Comienza interactuando con posts y otros usuarios."
+                              : `${profile.name} aún no ha realizado ninguna actividad.`
+                            }
+                          </p>
+                        </div>
+                      )}
                     </TabsContent>
                   </Tabs>
                 </CardContent>

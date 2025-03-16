@@ -1,38 +1,38 @@
-import { useState, useEffect, useCallback } from "react"
-import type { Comment, UseCommentsReturn } from "@/lib/types"
-import { useAuth } from "@/lib/auth"
-import { useToast } from "@/hooks/use-toast"
-import { customFetch } from "@/lib/customFetch"
+import { useCallback } from "react";
+import { useToast } from "@/hooks/use-toast";
+import { customFetch } from "@/lib/customFetch";
+import { useAuth } from "@/lib/auth";
+import type { Comment } from "@/lib/types";
 
-// Interfaz para datos de comentarios de la API
-interface ApiCommentData {
-  id: string;
-  content?: string;
-  author?: {
-    id?: string;
-    name?: string;
-    avatar?: string;
-  };
-  authorId?: string;
-  likes?: number;
-  replies?: ApiCommentData[];
-  createdAt?: string;
-  postId?: number;
-  parentId?: string;
-  [key: string]: unknown;
-}
-
-interface UseCommentsProps {
+interface UseCommentInteractionsProps {
   postId: number | null;
-  initialComments?: Comment[];
+  getBaseApiUrl: () => string;
+  updateCommentRecursively: (comments: Comment[], commentId: string, updateFn: (comment: Comment) => Comment) => Comment[];
+  removeCommentRecursively: (comments: Comment[], commentId: string) => Comment[];
+  setComments: React.Dispatch<React.SetStateAction<Comment[]>>;
+  setReplyingTo: React.Dispatch<React.SetStateAction<string | null>>;
+  setReplyContent: React.Dispatch<React.SetStateAction<string>>;
+  setIsLoading: React.Dispatch<React.SetStateAction<boolean>>;
 }
 
-export const useComments = ({ postId, initialComments = [] }: UseCommentsProps): UseCommentsReturn => {
-  // Asegurar que initialComments sea siempre un array
-  const safeInitialComments = Array.isArray(initialComments) ? initialComments : [];
-  
-  // Función para asegurar que cada comentario tenga la estructura correcta
-  const ensureCommentStructure = (comment: Comment): Comment => {
+/**
+ * Hook para operaciones de interacción con comentarios (like, respuesta, eliminación)
+ */
+export function useCommentInteractions({
+  postId,
+  getBaseApiUrl,
+  updateCommentRecursively,
+  removeCommentRecursively,
+  setComments,
+  setReplyingTo,
+  setReplyContent,
+  setIsLoading
+}: UseCommentInteractionsProps) {
+  const { toast } = useToast();
+  const { user } = useAuth();
+
+  // Asegurar que cada comentario tenga la estructura correcta
+  const ensureCommentStructure = useCallback((comment: Partial<Comment>): Comment => {
     if (!comment || typeof comment !== 'object') {
       // Si el comentario no es un objeto válido, devolver un objeto con estructura segura
       return {
@@ -65,261 +65,18 @@ export const useComments = ({ postId, initialComments = [] }: UseCommentsProps):
   
     // Devolver un comentario con todas las propiedades seguras
     return {
-      ...comment,
+      ...comment as Partial<Comment>,
       id: comment.id || Math.random().toString(),
       author,
       content: typeof comment.content === 'string' ? comment.content : '',
       likes: typeof comment.likes === 'number' ? comment.likes : 0,
       replies: Array.isArray(comment.replies) 
-        ? comment.replies.map(ensureCommentStructure) 
+        ? comment.replies.map(r => ensureCommentStructure(r as Partial<Comment>)) 
         : [],
       createdAt: comment.createdAt || new Date().toISOString(),
       postId: comment.postId || undefined
     };
-  };
-  
-  // Asegurar que los comentarios iniciales tengan la estructura correcta
-  const structuredInitialComments = safeInitialComments.map(ensureCommentStructure);
-  
-  const [comments, setComments] = useState<Comment[]>(structuredInitialComments)
-  const [replyingTo, setReplyingTo] = useState<string | null>(null)
-  const [replyContent, setReplyContent] = useState("")
-  const [isLoading, setIsLoading] = useState(false)
-  const { user } = useAuth()
-  const { toast } = useToast()
-
-  // Función para obtener la URL base de la API
-  const getBaseApiUrl = useCallback(() => {
-    let apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
-    // Eliminar la barra final si existe
-    if (apiUrl.endsWith('/')) {
-      apiUrl = apiUrl.slice(0, -1);
-    }
-    return apiUrl;
   }, []);
-
-  // Añadir estados para paginación y orden
-  const [page, setPage] = useState(1);
-  const [limit] = useState(10);
-  const [order, setOrder] = useState<string>('likes_desc');
-  const [hasMore, setHasMore] = useState(false);
-  const [meta, setMeta] = useState({
-    currentPage: 1,
-    totalPages: 1,
-    totalItems: 0,
-    itemsPerPage: 10
-  });
-
-  // Añadir un estado para controlar si ya se ha hecho la petición inicial
-  const [hasInitiallyLoaded, setHasInitiallyLoaded] = useState(false);
-
-  // Cargar comentarios del post
-  const fetchComments = useCallback(async (pageNum = 1, resetList = false, orderValue?: string) => {
-    if (!postId) {
-      // Si no hay postId, simplemente establecer un array vacío y terminar el estado de carga
-      setComments([]);
-      setIsLoading(false);
-      return;
-    }
-    
-    // Evitar iniciar una nueva carga si ya está en proceso
-    if (isLoading && pageNum === page) return;
-    
-    setIsLoading(true);
-    
-    try {
-      const apiUrl = getBaseApiUrl();
-      
-      // Usar el valor de orden pasado directamente o el del estado
-      const currentOrder = orderValue || order;
-      
-      // El backend espera directamente los valores: newest, oldest, likes_desc, likes_asc
-      // No necesitamos hacer conversión, usamos el valor directamente
-      console.log(`[DEBUG] Ejecutando fetchComments con orden: ${currentOrder}`);
-      
-      // Usar el nuevo endpoint que ya devuelve la estructura completa de comentarios anidados
-      const endpoint = `${apiUrl}/comments/post/${postId}/nested?page=${pageNum}&limit=${limit}&order=${currentOrder}`;
-      console.log(`[DEBUG] Cargando comentarios desde: ${endpoint}`);
-      
-      const response = await customFetch(endpoint);
-      
-      if (!response.ok) {
-        throw new Error(`Error al cargar comentarios: ${response.statusText}`);
-      }
-      
-      const responseJson = await response.json();
-      
-      // Extraer datos y metadatos
-      const commentsData = responseJson.data || [];
-      const metaData = responseJson.meta || {
-        currentPage: pageNum,
-        totalPages: 1,
-        totalItems: commentsData.length,
-        itemsPerPage: limit
-      };
-      
-      // Si no hay comentarios, establecer array vacío y terminar
-      if (commentsData.length === 0) {
-        console.log('[DEBUG] No se encontraron comentarios en la respuesta');
-        if (resetList) {
-          setComments([]);
-        }
-        setMeta(metaData);
-        setHasMore(false);
-        setPage(metaData.currentPage);
-        setIsLoading(false);
-        return;
-      }
-      
-      console.log(`[DEBUG] Se encontraron ${commentsData.length} comentarios principales con sus respuestas anidadas`);
-      
-      // Asegurar que cada comentario tenga la estructura correcta (recursivamente)
-      const ensureNestedStructure = (comment: ApiCommentData): Comment => {
-        // Crear una estructura base para el comentario
-        const baseComment: Comment = {
-          id: comment.id,
-          content: comment.content || '',
-          likes: comment.likes || 0,
-          replies: [],
-          createdAt: comment.createdAt || new Date().toISOString(),
-          postId: comment.postId || undefined,
-          parentId: comment.parentId,
-          author: comment.author 
-            ? {
-                id: comment.author.id || 'unknown',
-                name: comment.author.name || 'Usuario',
-                avatar: comment.author.avatar || ''
-              }
-            : {
-                id: comment.authorId || 'unknown',
-                name: 'Usuario',
-                avatar: ''
-              }
-        };
-        
-        // Procesar recursivamente las respuestas si existen
-        if (comment.replies && Array.isArray(comment.replies) && comment.replies.length > 0) {
-          baseComment.replies = comment.replies.map(ensureNestedStructure);
-        }
-        
-        return baseComment;
-      };
-      
-      // Procesar cada comentario principal y sus respuestas
-      const structuredComments = commentsData.map(ensureNestedStructure);
-      
-      // Contar el número total de respuestas cargadas para depuración
-      let totalRepliesCount = 0;
-      const countReplies = (commentsList: Comment[]) => {
-        commentsList.forEach(comment => {
-          if (comment.replies && comment.replies.length > 0) {
-            totalRepliesCount += comment.replies.length;
-            countReplies(comment.replies);
-          }
-        });
-      };
-      
-      countReplies(structuredComments);
-      console.log(`[DEBUG] Total de respuestas cargadas en todos los niveles: ${totalRepliesCount}`);
-
-      // Actualizar el estado con los comentarios cargados
-      if (resetList || pageNum === 1) {
-        setComments(structuredComments);
-      } else {
-        setComments(prevComments => [...prevComments, ...structuredComments]);
-      }
-      
-      // Actualizar metadatos
-      setMeta(metaData);
-      setHasMore(metaData.currentPage < metaData.totalPages);
-      setPage(metaData.currentPage);
-      
-    } catch (error) {
-      console.error('Error al obtener comentarios:', error);
-      toast({
-        title: "Error",
-        description: "No se pudieron cargar los comentarios. Intente nuevamente.",
-        variant: "destructive",
-      });
-      if (page === 1) {
-        setComments([]);
-      }
-    } finally {
-      // Garantizar que el estado de carga termine siempre
-      setIsLoading(false);
-    }
-  }, [postId, getBaseApiUrl, toast, isLoading, page, limit, order]);
-
-  // Función para cargar más comentarios
-  const loadMoreComments = useCallback(() => {
-    if (hasMore && !isLoading) {
-      fetchComments(page + 1, false, order);
-    }
-  }, [fetchComments, hasMore, isLoading, page, order]);
-
-  // Función para cambiar el orden de los comentarios
-  const changeCommentsOrder = useCallback((newOrder: string) => {
-    if (isLoading || newOrder === order) return;
-    
-    // Validar que el orden sea uno de los valores permitidos
-    const validOrders = ['newest', 'oldest', 'likes_desc', 'likes_asc'];
-    if (!validOrders.includes(newOrder)) {
-      console.error(`[ERROR] Orden inválido: ${newOrder}. Debe ser uno de: ${validOrders.join(', ')}`);
-      return;
-    }
-    
-    console.log(`[DEBUG] Cambiando orden de comentarios: ${order} -> ${newOrder}`);
-    setOrder(newOrder);
-    // Enviamos el nuevo valor directamente a fetchComments
-    fetchComments(1, true, newOrder);
-  }, [fetchComments, isLoading, order]);
-
-  // Cargar comentarios al inicio
-  useEffect(() => {
-    // Indicador para evitar actualizaciones de estado si el componente se desmonta
-    let isMounted = true;
-    
-    const loadComments = async () => {
-      // No cargar si ya se ha cargado antes para evitar múltiples peticiones
-      if (hasInitiallyLoaded) return;
-      
-      // Si hay comentarios iniciales, usarlos y marcar como cargado
-      if (initialComments && initialComments.length > 0) {
-        setHasInitiallyLoaded(true);
-        return;
-      }
-      
-      // Si no hay postId, no podemos cargar comentarios
-      if (!postId) {
-        if (isMounted) {
-          setIsLoading(false);
-          setHasInitiallyLoaded(true);
-        }
-        return;
-      }
-      
-      // Si no hay comentarios iniciales, obtenerlos de la API
-      await fetchComments(1, true, 'likes_desc');
-      if (isMounted) {
-        setHasInitiallyLoaded(true);
-      }
-    };
-    
-    // Reiniciar estados si cambia el postId
-    if (postId) {
-      // Solo resetear cuando el postId cambia realmente
-      if (!hasInitiallyLoaded) {
-        setPage(1);
-        setOrder('likes_desc');
-        loadComments();
-      }
-    }
-    
-    // Cleanup: marcar como desmontado para evitar actualizar estados
-    return () => {
-      isMounted = false;
-    };
-  }, [fetchComments, initialComments, postId, hasInitiallyLoaded]);
 
   // Dar/quitar like a un comentario
   const handleLike = useCallback(async (commentId: string) => {
@@ -347,7 +104,6 @@ export const useComments = ({ postId, initialComments = [] }: UseCommentsProps):
       }
       
       const responseJson = await response.json();
-      console.log('Respuesta like:', responseJson);
       
       // Extraer solo los valores que necesitamos de la respuesta
       let likesCount = 0;
@@ -396,7 +152,7 @@ export const useComments = ({ postId, initialComments = [] }: UseCommentsProps):
         variant: "destructive",
       });
     }
-  }, [user, getBaseApiUrl, toast]);
+  }, [user, getBaseApiUrl, toast, setComments, updateCommentRecursively]);
 
   // Responder a un comentario
   const handleReply = useCallback((commentId: string) => {
@@ -410,15 +166,15 @@ export const useComments = ({ postId, initialComments = [] }: UseCommentsProps):
     }
     setReplyingTo(commentId);
     setReplyContent("");
-  }, [user, toast]);
+  }, [user, toast, setReplyingTo, setReplyContent]);
 
   // Enviar una respuesta a un comentario
-  const submitReply = useCallback(async () => {
+  const submitReply = useCallback(async (replyingTo: string | null, replyContent: string) => {
     if (!user || !replyingTo || !replyContent.trim() || !postId) {
       return;
     }
 
-    setIsLoading(true); // Indicar que estamos cargando durante la creación de la respuesta
+    setIsLoading(true);
 
     try {
       const apiUrl = getBaseApiUrl();
@@ -439,7 +195,6 @@ export const useComments = ({ postId, initialComments = [] }: UseCommentsProps):
       }
       
       const responseJson = await response.json();
-      console.log('Respuesta al crear reply:', responseJson);
       
       // Crear una estructura segura para la respuesta
       const replyData: Partial<Comment> = {
@@ -523,9 +278,9 @@ export const useComments = ({ postId, initialComments = [] }: UseCommentsProps):
         variant: "destructive",
       });
     } finally {
-      setIsLoading(false); // Terminar el estado de carga independientemente del resultado
+      setIsLoading(false);
     }
-  }, [user, replyingTo, replyContent, postId, getBaseApiUrl, toast]);
+  }, [user, postId, getBaseApiUrl, toast, setComments, setReplyingTo, setReplyContent, setIsLoading, updateCommentRecursively, ensureCommentStructure]);
 
   // Añadir un nuevo comentario principal
   const addNewComment = useCallback(async (newCommentContent: string) => {
@@ -533,7 +288,7 @@ export const useComments = ({ postId, initialComments = [] }: UseCommentsProps):
       return false;
     }
 
-    setIsLoading(true); // Indicar que estamos cargando durante la creación del comentario
+    setIsLoading(true);
 
     try {
       const apiUrl = getBaseApiUrl();
@@ -554,7 +309,6 @@ export const useComments = ({ postId, initialComments = [] }: UseCommentsProps):
       }
       
       const responseJson = await response.json();
-      console.log('Respuesta al crear comentario:', responseJson);
       
       // Extraer el nuevo comentario con una estructura segura
       const newCommentData: Partial<Comment> = {
@@ -631,9 +385,9 @@ export const useComments = ({ postId, initialComments = [] }: UseCommentsProps):
       });
       return false;
     } finally {
-      setIsLoading(false); // Terminar el estado de carga independientemente del resultado
+      setIsLoading(false);
     }
-  }, [user, postId, getBaseApiUrl, toast]);
+  }, [user, postId, getBaseApiUrl, toast, setComments, setIsLoading, ensureCommentStructure]);
 
   // Eliminar un comentario
   const deleteComment = useCallback(async (commentId: string) => {
@@ -664,55 +418,13 @@ export const useComments = ({ postId, initialComments = [] }: UseCommentsProps):
         variant: "destructive",
       });
     }
-  }, [user, getBaseApiUrl, toast]);
-
-  // Función auxiliar para actualizar un comentario recursivamente
-  const updateCommentRecursively = (comments: Comment[], commentId: string, updateFn: (comment: Comment) => Comment): Comment[] => {
-    return comments.map(comment => {
-      if (comment.id === commentId) {
-        return updateFn(comment);
-      }
-      if (comment.replies.length > 0) {
-        return {
-          ...comment,
-          replies: updateCommentRecursively(comment.replies, commentId, updateFn)
-        };
-      }
-      return comment;
-    });
-  };
-
-  // Función auxiliar para eliminar un comentario recursivamente
-  const removeCommentRecursively = (comments: Comment[], commentId: string): Comment[] => {
-    return comments.filter(comment => {
-        if (comment.id === commentId) {
-        return false;
-      }
-      if (comment.replies.length > 0) {
-        comment.replies = removeCommentRecursively(comment.replies, commentId);
-      }
-      return true;
-    });
-  };
+  }, [user, getBaseApiUrl, toast, setComments, removeCommentRecursively]);
 
   return {
-    comments,
-    isLoading,
-    replyingTo,
-    replyContent,
     handleLike,
     handleReply,
     submitReply,
-    setReplyContent,
     addNewComment,
-    cancelReply: () => setReplyingTo(null),
-    deleteComment,
-    loadMoreComments,
-    changeCommentsOrder,
-    hasMore,
-    meta,
-    order,
+    deleteComment
   };
-}
-
-  
+} 

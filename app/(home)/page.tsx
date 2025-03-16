@@ -6,36 +6,66 @@ import { Pagination } from "@/components/common/Pagination"
 import { Hero } from "@/components/common/Hero"
 import { Sidebar } from "@/components/layout/Sidebar"
 import { motion, AnimatePresence } from "framer-motion"
-import { mockPosts } from "@/lib/mock-posts"
+import { Post, PostStatus } from "@/lib/types"
+import { customFetch } from "@/lib/customFetch"
 
 const POSTS_PER_PAGE = 6
+
+interface PostsResponse {
+  data: Post[]
+  meta: {
+    total: number
+    page: number
+    lastPage: number
+    limit: number
+  }
+}
 
 export default function Home() {
   const [currentPage, setCurrentPage] = useState(1)
   const [isLoading, setIsLoading] = useState(true)
+  const [posts, setPosts] = useState<Post[]>([])
+  const [totalPages, setTotalPages] = useState(1)
+
+  // Función para obtener la URL base de la API
+  const getBaseUrl = () => {
+    let apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'
+    if (apiUrl.endsWith('/')) {
+      apiUrl = apiUrl.slice(0, -1)
+    }
+    return apiUrl
+  }
+
+  const fetchPosts = async (page: number) => {
+    setIsLoading(true)
+    try {
+      const apiUrl = getBaseUrl()
+      const endpoint = `${apiUrl}/posts?page=${page}&limit=${POSTS_PER_PAGE}&status=${PostStatus.PUBLISHED}`
+      
+      const response = await customFetch(endpoint)
+      
+      if (!response.ok) {
+        throw new Error(`Error al cargar los posts: ${response.statusText}`)
+      }
+      
+      const data: PostsResponse = await response.json()
+      
+      setPosts(data.data)
+      setTotalPages(data.meta.lastPage)
+    } catch (error) {
+      console.error("Error al cargar los posts:", error)
+      // Manejar el error como prefieras
+    } finally {
+      setIsLoading(false)
+    }
+  }
 
   useEffect(() => {
-    // Simulate loading delay
-    const timer = setTimeout(() => {
-      setIsLoading(false)
-    }, 1500)
-
-    return () => clearTimeout(timer)
-  }, [])
-
-  const sortedPosts = [...mockPosts].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
-
-  const currentPosts = sortedPosts.slice((currentPage - 1) * POSTS_PER_PAGE, currentPage * POSTS_PER_PAGE)
-
-  const totalPages = Math.ceil(sortedPosts.length / POSTS_PER_PAGE)
+    fetchPosts(currentPage)
+  }, [currentPage])
 
   const handlePageChange = (pageNumber: number) => {
     setCurrentPage(pageNumber)
-    setIsLoading(true)
-    // Simulate loading delay when changing pages
-    setTimeout(() => {
-      setIsLoading(false)
-    }, 1000)
     // Scroll to top smoothly
     window.scrollTo({ top: 0, behavior: "smooth" })
   }
@@ -64,15 +94,17 @@ export default function Home() {
                 exit={{ opacity: 0, y: -20 }}
                 transition={{ duration: 0.3 }}
               >
-                <BlogList posts={currentPosts} isLoading={isLoading} />
+                <BlogList posts={posts} isLoading={isLoading} />
               </motion.div>
             </AnimatePresence>
-            <Pagination
-              currentPage={currentPage}
-              totalPages={totalPages}
-              onPageChange={handlePageChange}
-              className="mt-8"
-            />
+            {totalPages > 1 && (
+              <Pagination
+                currentPage={currentPage}
+                totalPages={totalPages}
+                onPageChange={handlePageChange}
+                className="mt-8"
+              />
+            )}
           </main>
           <aside className="w-full lg:w-1/3">
             <div className="lg lg:top-24">

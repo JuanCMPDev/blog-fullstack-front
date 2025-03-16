@@ -2,7 +2,12 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   images: {
-    domains: [process.env.CLOUDFRONT_URL || ''],
+    remotePatterns: [
+      {
+        protocol: 'https',
+        hostname: process.env.NEXT_PUBLIC_CLOUDFRONT_URL || '',
+      },
+    ],
   },
 };
 

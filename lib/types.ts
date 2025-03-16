@@ -48,6 +48,7 @@ export interface Author {
   id: string
   name: string
   avatar: string
+  nick?: string
 }
 
 // Tipos principales
@@ -64,6 +65,8 @@ export interface Post extends BasePost {
   publishDate: string | null
   readTime: number
   status: PostStatus
+  createdAt?: string
+  updatedAt?: string
 }
 
 export interface Comment {
@@ -73,6 +76,13 @@ export interface Comment {
   likes: number
   replies: Comment[]
   createdAt: string
+  postId?: number
+  hasLiked?: boolean
+  authorId?: string
+  parentId?: string
+  _count?: {
+    replies?: number
+  }
 }
 
 export interface NavItem {
@@ -102,6 +112,7 @@ export interface BlogListProps {
 
 export interface CommentsProps {
   comments: Comment[]
+  postId?: number
 }
 
 export interface CodeBlockProps {
@@ -127,8 +138,17 @@ export interface ProtectedRouteProps {
 export interface RenderProfileData {
   profile: UserProfile;
   savedPosts: Post[];
+  activities: Activity[];
   isEditing: boolean;
   canEdit: boolean;
+  isLoading: boolean;
+  isLoadingActivities: boolean;
+  hasMoreActivities: boolean;
+  activitiesPagination: {
+    page: number;
+    lastPage: number;
+    total: number;
+  };
   handlers: {
     handleEdit: () => void;
     handleCancel: () => void;
@@ -137,6 +157,8 @@ export interface RenderProfileData {
     handleAvatarUpdate: () => Promise<void>;
     handleCoverImageChange: (file: File) => void;
     handleCoverImageUpdate: () => Promise<void>;
+    loadMoreActivities: () => void;
+    goToActivityPage: (page: number) => void;
   };
 }
 
@@ -160,15 +182,26 @@ export interface AuthState {
 
 export interface UseCommentsReturn {
   comments: Comment[]
+  isLoading: boolean
   replyingTo: string | null
   replyContent: string
-  handleLike: (commentId: string) => void
+  handleLike: (commentId: string) => Promise<void>
   handleReply: (commentId: string) => void
-  submitReply: () => void
+  submitReply: () => Promise<void>
   setReplyContent: (content: string) => void
-  addNewComment: (content: string, authorId: string) => void
+  addNewComment: (content: string) => Promise<boolean | undefined>
   cancelReply: () => void
-  deleteComment: (commentId: string) => void
+  deleteComment: (commentId: string) => Promise<void>
+  loadMoreComments: () => void
+  changeCommentsOrder: (newOrder: string) => void
+  hasMore: boolean
+  meta: {
+    currentPage: number
+    totalPages: number
+    totalItems: number
+    itemsPerPage: number
+  }
+  order: string
 }
 
 // Perfil del usuario
@@ -198,15 +231,39 @@ export interface EditProfileFormProps {
   onCancel: () => void
 }
 
+export interface Activity {
+  id: number;
+  type: "POST_CREATED" | "COMMENTED" | "LIKED" | "SAVED_POST";
+  description: string;
+  createdAt: string;
+  user: {
+    id: string;
+    nick: string;
+    name: string;
+    avatar: string | null;
+  };
+}
+
 export interface UseProfileReturn {
   profile: UserProfile | null
   savedPosts: Post[]
+  activities: Activity[] 
   isLoading: boolean
+  isLoadingActivities: boolean
   error: string | null
+  activitiesError: string | null
   updateProfile: (updatedProfile: UserProfile) => Promise<UserProfile | null>
   updateAvatar: (newAvatar: File) => Promise<void>
   updateCoverImage: (newCoverImage: File) => Promise<void>
-  fetchProfile: () => Promise<void>;
+  fetchProfile: () => Promise<void>
+  loadMoreActivities: () => void
+  goToActivityPage: (page: number) => void
+  hasMoreActivities: boolean
+  activitiesPagination: {
+    page: number
+    lastPage: number
+    total: number
+  }
 }
 
 // Configuración de usuario

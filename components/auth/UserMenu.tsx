@@ -1,9 +1,9 @@
 import { useState, useRef, useEffect } from "react"
-import Link from "next/link"
 import { motion, AnimatePresence } from "framer-motion"
 import { UserCircle, Settings, LogOut, LayoutDashboard } from "lucide-react"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { useAuth } from "@/lib/auth"
+import { useRouter } from "next/navigation"
 
 interface UserMenuProps {
   user: {
@@ -17,8 +17,10 @@ interface UserMenuProps {
 
 export function UserMenu({ user }: UserMenuProps) {
   const [isOpen, setIsOpen] = useState(false)
+  const [isAnimating, setIsAnimating] = useState(false)
   const menuRef = useRef<HTMLDivElement>(null)
   const { logout } = useAuth()
+  const router = useRouter()
 
   // Logs para verificar el role
   console.log("UserMenu recibió user:", user);
@@ -53,10 +55,43 @@ export function UserMenu({ user }: UserMenuProps) {
   console.log("¿Mostrar Dashboard?:", user.role === "admin" || user.role === "editor");
   console.log("Menu items:", menuItems);
 
+  // Función para manejar la navegación y cerrar el menú
+  const handleNavigation = (href: string) => {
+    // Iniciar animación
+    setIsAnimating(true)
+    
+    // Cerrar el menú
+    setIsOpen(false)
+    
+    // Navegar después de un pequeño retraso para que se vea la animación
+    setTimeout(() => {
+      router.push(href)
+      
+      // Terminar la animación después de la navegación
+      setTimeout(() => {
+        setIsAnimating(false)
+      }, 600)
+    }, 300)
+  }
+  
+  // Función para manejar el cierre de sesión
+  const handleLogout = () => {
+    setIsAnimating(true)
+    setIsOpen(false)
+    
+    setTimeout(() => {
+      logout()
+      
+      setTimeout(() => {
+        setIsAnimating(false)
+      }, 600)
+    }, 300)
+  }
+
   return (
     <div className="relative" ref={menuRef}>
       <button
-        className="relative h-10 w-10 rounded-full overflow-hidden focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 transition-all duration-300 ease-in-out transform hover:scale-110"
+        className={`relative h-10 w-10 ${isAnimating ? 'ring-4 ring-primary transition-all duration-700' : ''} rounded-full overflow-hidden focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 transition-all duration-300 ease-in-out transform hover:scale-110`}
         onClick={() => setIsOpen(!isOpen)}
       >
         <Avatar className="h-full w-full">
@@ -85,28 +120,28 @@ export function UserMenu({ user }: UserMenuProps) {
             </div>
             <div className="py-2">
               {menuItems.map((item, index) => (
-                <Link
+                <div
                   key={index}
-                  href={item.href}
-                  className="flex items-center px-4 py-3 text-sm text-foreground hover:bg-accent/50 transition-colors duration-150 group"
+                  onClick={() => handleNavigation(item.href)}
+                  className="flex items-center px-4 py-3 text-sm text-foreground hover:bg-accent/50 transition-colors duration-150 group cursor-pointer"
                 >
                   <span className="flex items-center justify-center w-8 h-8 rounded-full bg-primary/10 group-hover:bg-primary/20 mr-3 transition-colors duration-150">
                     <item.icon className="h-5 w-5 text-primary" aria-hidden="true" />
                   </span>
                   <span className="font-medium">{item.label}</span>
-                </Link>
+                </div>
               ))}
             </div>
             <div className="py-2 bg-gradient-to-r from-destructive/10 to-destructive/20 backdrop-blur-sm">
-              <button
-                onClick={logout}
-                className="flex w-full items-center px-4 py-3 text-sm text-foreground hover:bg-destructive/20 transition-colors duration-150 group"
+              <div
+                onClick={handleLogout}
+                className="flex w-full items-center px-4 py-3 text-sm text-foreground hover:bg-destructive/20 transition-colors duration-150 group cursor-pointer"
               >
                 <span className="flex items-center justify-center w-8 h-8 rounded-full bg-destructive/10 group-hover:bg-destructive/30 mr-3 transition-colors duration-150">
                   <LogOut className="h-5 w-5 text-destructive" aria-hidden="true" />
                 </span>
                 <span className="font-medium">Cerrar sesión</span>
-              </button>
+              </div>
             </div>
           </motion.div>
         )}

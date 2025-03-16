@@ -1,12 +1,11 @@
 "use client"
 
-import { useState, useEffect, useRef } from "react"
+import { useState, useEffect, useRef, memo } from "react"
 import Image from "next/image"
 import { useParams, useRouter } from "next/navigation"
-import { motion } from "framer-motion"
 import { format } from "date-fns"
 import { es } from "date-fns/locale"
-import { ThumbsUp, MessageCircle, Bookmark, Calendar, Clock, Settings, AlertCircle } from "lucide-react"
+import { MessageCircle, Calendar, Clock, Settings, AlertCircle } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Skeleton } from "@/components/ui/skeleton"
@@ -14,48 +13,23 @@ import { Comments } from "@/components/blog/Comments"
 import { useAuth } from "@/lib/auth"
 import { Tag } from "@/components/common/Tag"
 import { ShareMenu } from "@/components/blog/ShareMenu"
-import type { Post } from "@/lib/types"
+import { LikeButton } from "@/components/blog/LikeButton"
+import { SaveButton } from "@/components/blog/SaveButton"
+import type { Post, Comment } from "@/lib/types"
 import { useToast } from "@/hooks/use-toast"
 import { customFetch } from "@/lib/customFetch"
 import { getAvatarUrl } from "@/lib/utils"
 import { Prism as SyntaxHighlighter } from "react-syntax-highlighter"
 import { tomorrow } from "react-syntax-highlighter/dist/esm/styles/prism"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
-
-const mockComments = [
-  {
-    id: "1",
-    author: { id: "user1", name: "Juan Pérez", avatar: "/placeholder.svg?height=40&width=40" },
-    content: "¡Excelente artículo! Me ha ayudado mucho a entender los conceptos.",
-    likes: 5,
-    replies: [
-      {
-        id: "1-1",
-        author: { id: "user2", name: "María González", avatar: "/placeholder.svg?height=40&width=40" },
-        content: "¡Gracias Juan! Me alegro de que te haya sido útil.",
-        likes: 2,
-        replies: [],
-        createdAt: "2023-07-16T15:30:00Z",
-      },
-    ],
-    createdAt: "2023-07-16T14:00:00Z",
-  },
-  {
-    id: "2",
-    author: { id: "user3", name: "Ana Rodríguez", avatar: "/placeholder.svg?height=40&width=40" },
-    content: "¿Podrías hacer un artículo sobre temas más avanzados en este campo?",
-    likes: 3,
-    replies: [],
-    createdAt: "2023-07-17T10:00:00Z",
-  },
-]
+import { motion } from "framer-motion"
 
 export default function PostPage() {
   const { slug } = useParams()
   const [post, setPost] = useState<Post | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const router = useRouter()
-  const { isAdmin, isEditor, user } = useAuth()
+  const { isAdmin, isEditor } = useAuth()
   const commentSectionRef = useRef<HTMLDivElement>(null)
   const { toast } = useToast()
 
@@ -264,19 +238,6 @@ export default function PostPage() {
     )
   }
 
-  const handleLike = () => {
-    if (!user) {
-      toast({
-        title: "Inicio de sesión requerido",
-        description: "Debes iniciar sesión para dar like.",
-        variant: "destructive",
-      })
-      return
-    }
-    // Aquí iría la lógica para dar like al post
-    console.log("Like dado al post")
-  }
-
   return (
     <div className="container max-w-4xl px-4 py-8 mx-auto">
       {isLoading ? (
@@ -336,9 +297,11 @@ export default function PostPage() {
               <Calendar className="mr-1 h-4 w-4" />
               {(() => {
                 try {
-                  if (post.date && post.date !== 'null') {
+                  // Usar publishDate para posts publicados, o createdAt como alternativa
+                  const dateToUse = post.publishDate || post.createdAt;
+                  if (dateToUse && dateToUse !== 'null') {
                     return format(
-                      new Date(post.date),
+                      new Date(dateToUse),
                       "d 'de' MMMM 'de' yyyy",
                       { locale: es }
                     );
@@ -364,21 +327,25 @@ export default function PostPage() {
           {renderContent(post.content)}
           <div className="flex items-center justify-between border-t border-b py-4 mb-8 bg-background/90">
             <div className="flex items-center space-x-2 sm:space-x-4">
-              <Button variant="ghost" size="sm" className="text-xs sm:text-sm px-2 sm:px-3" onClick={handleLike}>
-                <ThumbsUp className="h-4 w-4 mr-1 sm:mr-2" />
-                <span>{post.likes}</span>
-              </Button>
+              <LikeButton 
+                postId={post.id} 
+                initialLikesCount={post.likes} 
+                size="sm"
+              />
               <Button variant="ghost" size="sm" className="text-xs sm:text-sm px-2 sm:px-3" onClick={scrollToComments}>
                 <MessageCircle className="h-4 w-4 mr-1 sm:mr-2" />
-                <span>{post.comments}</span>
+                <span>
+                  {typeof post.comments === 'number' 
+                    ? post.comments 
+                    : (post.comments && Array.isArray(post.comments))
+                      ? (post.comments as Comment[]).length
+                      : 0}
+                </span>
               </Button>
             </div>
             <div className="flex items-center space-x-2 sm:space-x-4">
               <ShareMenu url={`https://yourblog.com/post/${post.id}`} title={post.title} />
-              <Button variant="ghost" size="sm" className="text-xs sm:text-sm px-2 sm:px-3">
-                <Bookmark className="h-4 w-4 sm:mr-2" />
-                <span className="hidden sm:inline">Guardar</span>
-              </Button>
+              <SaveButton postId={post.id} size="sm" />
               {isAdmin() && (
                 <Button variant="ghost" size="sm" className="text-xs sm:text-sm px-2 sm:px-3">
                   <Settings className="h-4 w-4 sm:mr-2" />
@@ -388,10 +355,22 @@ export default function PostPage() {
             </div>
           </div>
           <div ref={commentSectionRef}>
-            <Comments comments={mockComments} />
+            <CommentsSection postId={post.id} />
           </div>
         </motion.article>
       ) : null}
     </div>
   )
 }
+
+// Componente separado para la sección de comentarios
+const CommentsSection = memo(({ postId }: { postId: number }) => {
+  return (
+    <>
+      {/* Always show the Comments component regardless of loading state */}
+      <Comments comments={[]} postId={postId} />
+    </>
+  )
+})
+
+CommentsSection.displayName = "CommentsSection";

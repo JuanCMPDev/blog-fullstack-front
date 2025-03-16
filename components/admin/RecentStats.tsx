@@ -1,11 +1,11 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import React, { useState, useEffect } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { fetchRecentStats, type RecentStats } from "@/lib/recent-stats-data"
 import { Skeleton } from "@/components/ui/skeleton"
-import { Eye, MessageSquare, Trophy, Users, MousePointer2, Clock, TrendingUp } from "lucide-react"
-import Image from "next/image"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { MessageSquare, TrendingUp, Award } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from "@/components/ui/carousel"
 
@@ -100,7 +100,9 @@ export function RecentStats() {
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <Card className="overflow-hidden max-h-[120px]">
                   <div className="bg-gradient-to-br from-blue-500 to-blue-600 p-2">
-                    <Users className="h-5 w-5 text-white mb-1" />
+                    <Avatar className="h-5 w-5 text-white mb-1">
+                      <AvatarFallback>U</AvatarFallback>
+                    </Avatar>
                     <h4 className="text-white font-semibold text-xs">Visitas únicas</h4>
                   </div>
                   <CardContent className="pt-2">
@@ -110,7 +112,9 @@ export function RecentStats() {
                 </Card>
                 <Card className="overflow-hidden max-h-[120px]">
                   <div className="bg-gradient-to-br from-green-500 to-green-600 p-2">
-                    <MousePointer2 className="h-5 w-5 text-white mb-1" />
+                    <Avatar className="h-5 w-5 text-white mb-1">
+                      <AvatarFallback>P</AvatarFallback>
+                    </Avatar>
                     <h4 className="text-white font-semibold text-xs">Páginas vistas</h4>
                   </div>
                   <CardContent className="pt-2">
@@ -120,7 +124,9 @@ export function RecentStats() {
                 </Card>
                 <Card className="overflow-hidden max-h-[120px]">
                   <div className="bg-gradient-to-br from-purple-500 to-purple-600 p-2">
-                    <Clock className="h-5 w-5 text-white mb-1" />
+                    <Avatar className="h-5 w-5 text-white mb-1">
+                      <AvatarFallback>T</AvatarFallback>
+                    </Avatar>
                     <h4 className="text-white font-semibold text-xs">Tiempo promedio</h4>
                   </div>
                   <CardContent className="pt-2">
@@ -143,27 +149,31 @@ export function RecentStats() {
                         <div className="relative">
                           <div className="absolute top-2 left-2 z-10">
                             <Badge variant="secondary" className={`text-xs font-bold ${getPodiumColor(index)}`}>
-                              <Trophy className="w-3 h-3 mr-1" />#{index + 1}
+                              <Award className="w-3 h-3 mr-1" />#{index + 1}
                             </Badge>
                           </div>
                           <div className="relative w-full h-32">
-                            <Image
-                              src={post.image || "/placeholder-post-image.jpeg"}
-                              alt={post.title}
-                              layout="fill"
-                              objectFit="cover"
-                            />
+                            <Avatar
+                              className="h-full w-full"
+                            >
+                              <AvatarImage src={post.image || "/placeholder-post-image.jpeg"} alt={post.title} />
+                              <AvatarFallback>{post.title.substring(0, 2)}</AvatarFallback>
+                            </Avatar>
                           </div>
                           <CardContent className="p-3">
                             <h4 className="font-semibold text-sm mb-2 line-clamp-2">{post.title}</h4>
                             <div className="flex items-center justify-between text-xs text-muted-foreground">
                               <span className="flex items-center">
-                                <Eye className="h-3 w-3 mr-1" />
+                                <Avatar className="h-3 w-3 mr-1">
+                                  <AvatarFallback>E</AvatarFallback>
+                                </Avatar>
                                 {post.views.toLocaleString()}
                               </span>
                               <span className="flex items-center">
                                 <MessageSquare className="h-3 w-3 mr-1" />
-                                {post.comments}
+                                {typeof post.comments === 'number' 
+                                  ? post.comments 
+                                  : 0}
                               </span>
                               <Badge variant="outline" className="text-[10px]">
                                 {post.category}

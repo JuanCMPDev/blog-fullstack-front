@@ -18,7 +18,22 @@ export function ProfileContainer({ nick, render }: ProfileContainerProps) {
   
   // Usamos useProfile(nick) para obtener el perfil (propio o ajeno)
   // Si nick es undefined, el hook manejará este caso internamente
-  const { profile, savedPosts, isLoading, error, updateProfile, updateAvatar, updateCoverImage, fetchProfile } = useProfile(nick);
+  const { 
+    profile, 
+    savedPosts, 
+    activities,
+    isLoading, 
+    isLoadingActivities,
+    error, 
+    updateProfile, 
+    updateAvatar, 
+    updateCoverImage, 
+    fetchProfile,
+    loadMoreActivities,
+    goToActivityPage,
+    hasMoreActivities,
+    activitiesPagination
+  } = useProfile(nick);
   
   // Si no hay nick, mostrar un mensaje de error con opciones para el usuario
   if (!nick) {
@@ -123,8 +138,13 @@ export function ProfileContainer({ nick, render }: ProfileContainerProps) {
   const renderData: RenderProfileData = {
     profile,
     savedPosts,
+    activities,
     isEditing,
     canEdit: Boolean(isOwner),
+    isLoading,
+    isLoadingActivities,
+    hasMoreActivities,
+    activitiesPagination,
     handlers: {
       handleEdit,
       handleCancel,
@@ -133,6 +153,8 @@ export function ProfileContainer({ nick, render }: ProfileContainerProps) {
       handleAvatarUpdate,
       handleCoverImageChange,
       handleCoverImageUpdate,
+      loadMoreActivities,
+      goToActivityPage,
     },
   };
 

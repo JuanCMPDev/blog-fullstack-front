@@ -11,12 +11,12 @@ import { Tag } from "@/components/common/Tag"
 import { AuthorAvatar } from "@/components/common/AuthorAvatar"
 
 export function BlogPost({
-  id,
   title,
   excerpt,
   likes,
   comments,
-  image,
+  coverImage,
+  slug,
   tags,
   author,
   publishDate,
@@ -27,12 +27,12 @@ export function BlogPost({
     <Card className="flex flex-col h-full overflow-hidden transition-all duration-300 hover:shadow-lg hover:-translate-y-1">
       <div className="relative w-full pt-[56.25%] overflow-hidden group">
         <Link
-          href={`/post/${id}`}
+          href={`/post/${slug}`}
           className={`block ${isMobile ? "cursor-default active:cursor-pointer" : ""}`}
           {...(isMobile ? { onTouchStart: () => { } } : {})}
         >
           <Image
-            src={image || "/placeholder.svg"}
+            src={coverImage || "/placeholder.svg"}
             alt={title}
             layout="fill"
             objectFit="cover"
@@ -42,7 +42,7 @@ export function BlogPost({
         </Link>
       </div>
       <CardHeader className="pb-2">
-        <Link href={`/post/${id}`} className="hover:underline">
+        <Link href={`/post/${slug}`} className="hover:underline">
           <h3 className="text-xl font-semibold leading-tight tracking-tight line-clamp-2">{title}</h3>
         </Link>
       </CardHeader>
@@ -83,7 +83,7 @@ export function BlogPost({
           asChild
           className="text-primary hover:text-primary-foreground hover:bg-primary transition-colors duration-300"
         >
-          <Link href={`/post/${id}`}>
+          <Link href={`/post/${slug}`}>
             Leer más <ArrowRight className="ml-2 h-4 w-4" />
           </Link>
         </Button>

@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useMemo } from "react"
+import { useState, useEffect, useMemo, useCallback } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import { BlogList } from "@/components/blog/BlogList"
 import { Pagination } from "@/components/common/Pagination"
@@ -10,95 +10,211 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Search, SortAsc, SortDesc, X } from "lucide-react"
 import { motion, AnimatePresence } from "framer-motion"
-import { mockPosts } from "@/lib/mock-posts"
 import { Sidebar } from "@/components/layout/Sidebar"
 import { Badge } from "@/components/ui/badge"
+import { Post, PostStatus } from "@/lib/types"
+import { customFetch } from "@/lib/customFetch"
 
 const POSTS_PER_PAGE = 6
 
 type SortOption = "date" | "votes" | "comments"
 type SortOrder = "asc" | "desc"
 
+interface PostsResponse {
+  data: Post[]
+  meta: {
+    total: number
+    page: number
+    lastPage: number
+    limit: number
+  }
+}
+
+// Mapeo de opciones de ordenación internas a valores de API
+const sortOptionsMap = {
+  date: "publishDate",
+  votes: "likes",
+  comments: "comments"
+};
+
 export default function SearchPage() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const query = searchParams.get("q") || ""
   const tags = useMemo(() => searchParams.get("tags")?.split(",").filter(Boolean) || [], [searchParams])
-  const page = Number(searchParams.get("page")) || 1
+  const pageParam = Number(searchParams.get("page")) || 1
+  const sortByParam = searchParams.get("sortBy") as SortOption || "date"
+  const sortOrderParam = searchParams.get("sortOrder") as SortOrder || "desc"
 
   const [searchTerm, setSearchTerm] = useState(query)
   const [selectedTags, setSelectedTags] = useState<string[]>(tags)
   const [isLoading, setIsLoading] = useState(true)
-  const [sortBy, setSortBy] = useState<SortOption>("date")
-  const [sortOrder, setSortOrder] = useState<SortOrder>("desc")
+  const [sortBy, setSortBy] = useState<SortOption>(sortByParam)
+  const [sortOrder, setSortOrder] = useState<SortOrder>(sortOrderParam)
+  
+  const [posts, setPosts] = useState<Post[]>([])
+  const [totalResults, setTotalResults] = useState(0)
+  const [totalPages, setTotalPages] = useState(1)
+  const [currentPage, setCurrentPage] = useState(pageParam)
 
+  // Función para obtener la URL base de la API
+  const getBaseUrl = () => {
+    let apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'
+    if (apiUrl.endsWith('/')) {
+      apiUrl = apiUrl.slice(0, -1)
+    }
+    return apiUrl
+  }
+
+  const fetchPosts = useCallback(async () => {
+    setIsLoading(true)
+    try {
+      const apiUrl = getBaseUrl()
+      
+      // Construir parámetros de la URL
+      const params = new URLSearchParams()
+      
+      // Agregar término de búsqueda si existe
+      if (query) {
+        params.set('searchTerm', query)
+      }
+      
+      // Agregar tags si existen (como formato JSON)
+      if (selectedTags.length > 0) {
+        params.set('tags', JSON.stringify(selectedTags))
+      }
+      
+      // Establecer estado a PUBLISHED
+      params.set('status', PostStatus.PUBLISHED)
+      
+      // Paginación
+      params.set('page', currentPage.toString())
+      params.set('limit', POSTS_PER_PAGE.toString())
+      
+      // Ordenamiento - Mapear nuestras opciones al formato de la API
+      const apiSortField = sortOptionsMap[sortBy]
+      params.set('orderBy', apiSortField)
+      params.set('order', sortOrder)
+      
+      const endpoint = `${apiUrl}/posts/search?${params.toString()}`
+      console.log("Búsqueda con:", endpoint)
+      
+      const response = await customFetch(endpoint)
+      
+      if (!response.ok) {
+        throw new Error(`Error al buscar posts: ${response.statusText}`)
+      }
+      
+      const data: PostsResponse = await response.json()
+      
+      setPosts(data.data)
+      setTotalResults(data.meta.total)
+      setTotalPages(data.meta.lastPage)
+    } catch (error) {
+      console.error("Error al buscar posts:", error)
+      setPosts([])
+      setTotalResults(0)
+      setTotalPages(1)
+    } finally {
+      setIsLoading(false)
+    }
+  }, [query, selectedTags, currentPage, sortBy, sortOrder]);
+
+  // Sincronizar estados con parámetros de URL
   useEffect(() => {
     setSearchTerm(query)
     setSelectedTags(tags)
-    setIsLoading(true)
-    const timer = setTimeout(() => {
-      setIsLoading(false)
-    }, 1000)
-    return () => clearTimeout(timer)
-  }, [query, tags])
+    setCurrentPage(pageParam)
+    setSortBy(sortByParam)
+    setSortOrder(sortOrderParam)
+  }, [query, tags, pageParam, sortByParam, sortOrderParam])
+
+  // Efecto para realizar la búsqueda cuando cambian las dependencias
+  useEffect(() => {
+    fetchPosts()
+  }, [fetchPosts])
+
+  // Actualizar la URL y mantener los parámetros de búsqueda
+  const updateUrlParams = useCallback((params: {
+    query?: string,
+    tags?: string[],
+    page?: number,
+    sortBy?: SortOption,
+    sortOrder?: SortOrder
+  }) => {
+    const urlParams = new URLSearchParams(searchParams.toString())
+    
+    // Solo actualizar los parámetros proporcionados
+    if (params.query !== undefined) {
+      if (params.query) urlParams.set("q", params.query)
+      else urlParams.delete("q")
+    }
+    
+    if (params.tags !== undefined) {
+      if (params.tags && params.tags.length > 0) urlParams.set("tags", params.tags.join(","))
+      else urlParams.delete("tags")
+    }
+    
+    if (params.page !== undefined) {
+      urlParams.set("page", params.page.toString())
+    }
+    
+    if (params.sortBy !== undefined) {
+      urlParams.set("sortBy", params.sortBy)
+    }
+    
+    if (params.sortOrder !== undefined) {
+      urlParams.set("sortOrder", params.sortOrder)
+    }
+    
+    // Actualizar URL sin causar navegación completa
+    const url = `/search?${urlParams.toString()}`
+    router.push(url, { scroll: false })
+  }, [searchParams, router])
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault()
-    updateSearch(searchTerm, selectedTags)
-  }
-
-  const updateSearch = (newQuery: string, newTags: string[]) => {
-    const params = new URLSearchParams()
-    if (newQuery) params.set("q", newQuery)
-    if (newTags.length > 0) params.set("tags", newTags.join(","))
-    router.push(`/search?${params.toString()}`)
+    
+    // Actualizar estados locales
+    setSortBy(sortBy)
+    setSortOrder(sortOrder)
+    setCurrentPage(1)
+    
+    // Actualizar URL
+    updateUrlParams({
+      query: searchTerm,
+      tags: selectedTags,
+      page: 1,
+      sortBy,
+      sortOrder
+    })
   }
 
   const handleTagRemove = (tagToRemove: string) => {
     const newTags = selectedTags.filter((tag) => tag !== tagToRemove)
-    updateSearch(searchTerm, newTags)
+    setSelectedTags(newTags)
+    setCurrentPage(1)
+    
+    updateUrlParams({
+      tags: newTags,
+      page: 1
+    })
   }
 
-  const filteredPosts = useMemo(() => {
-    return mockPosts
-      .filter((post) => {
-        const searchRegex = new RegExp(query, "i")
-        const matchesSearch =
-          searchRegex.test(post.title) ||
-          searchRegex.test(post.excerpt) ||
-          searchRegex.test(post.content) ||
-          searchRegex.test(post.author.name)
-        const matchesTags = selectedTags.length === 0 || selectedTags.every((tag) => post.tags.includes(tag))
-        return matchesSearch && matchesTags
-      })
-      .sort((a, b) => {
-        if (sortBy === "date") {
-          return sortOrder === "asc"
-            ? new Date(a.date).getTime() - new Date(b.date).getTime()
-            : new Date(b.date).getTime() - new Date(a.date).getTime()
-        } else if (sortBy === "votes") {
-          return sortOrder === "asc" ? a.likes - b.likes : b.likes - a.likes
-        } else {
-          return sortOrder === "asc" ? a.comments - b.comments : b.comments - a.comments
-        }
-      })
-  }, [query, selectedTags, sortBy, sortOrder])
-
-  const totalPages = Math.ceil(filteredPosts.length / POSTS_PER_PAGE)
-  const currentPosts = filteredPosts.slice((page - 1) * POSTS_PER_PAGE, page * POSTS_PER_PAGE)
-
   const handlePageChange = (newPage: number) => {
-    const params = new URLSearchParams(searchParams.toString())
-    params.set("page", newPage.toString())
-    router.push(`/search?${params.toString()}`)
+    setCurrentPage(newPage)
+    updateUrlParams({ page: newPage })
   }
 
   const handleSortChange = (value: SortOption) => {
     setSortBy(value)
+    updateUrlParams({ sortBy: value })
   }
 
   const toggleSortOrder = () => {
-    setSortOrder((prev) => (prev === "asc" ? "desc" : "asc"))
+    const newSortOrder = sortOrder === "asc" ? "desc" : "asc"
+    setSortOrder(newSortOrder)
+    updateUrlParams({ sortOrder: newSortOrder })
   }
 
   return (
@@ -174,25 +290,25 @@ export default function SearchPage() {
               </p>
             )}
 
-            <p className="text-sm text-muted-foreground mb-4">{filteredPosts.length} resultados encontrados</p>
+            <p className="text-sm text-muted-foreground mb-4">{totalResults} resultados encontrados</p>
 
             <AnimatePresence mode="wait">
               <motion.div
-                key={page + query + selectedTags.join(",") + sortBy + sortOrder}
+                key={currentPage + query + selectedTags.join(",") + sortBy + sortOrder}
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -20 }}
                 transition={{ duration: 0.3 }}
               >
-                <BlogList posts={currentPosts} isLoading={isLoading} />
+                <BlogList posts={posts} isLoading={isLoading} />
               </motion.div>
             </AnimatePresence>
 
-            {filteredPosts.length > POSTS_PER_PAGE && (
-              <Pagination currentPage={page} totalPages={totalPages} onPageChange={handlePageChange} className="mt-8" />
+            {totalPages > 1 && (
+              <Pagination currentPage={currentPage} totalPages={totalPages} onPageChange={handlePageChange} className="mt-8" />
             )}
 
-            {!isLoading && filteredPosts.length === 0 && (
+            {!isLoading && posts.length === 0 && (
               <p className="text-center text-lg text-muted-foreground mt-8">
                 No se encontraron resultados para tu búsqueda.
               </p>
