@@ -4,7 +4,8 @@ import './globals.css'
 import { ThemeProvider } from '@/components/common/theme-provider'
 import { Toaster } from '@/components/ui/toaster'
 import { AuthProvider } from "@/components/layout/AuthProvider"
-
+import { SettingsProvider } from '@/hooks/use-settings'
+import { GoogleAnalytics } from '@next/third-parties/google'
 const inter = Inter({
   subsets: ['latin'],
   display: 'swap',
@@ -25,10 +26,13 @@ export default function RootLayout({
   return (
     <html lang="es" suppressHydrationWarning>
       <body className={inter.className}>
-        <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
-          <AuthProvider>{children}</AuthProvider>
-        </ThemeProvider>
+          <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
+            <SettingsProvider>
+              <AuthProvider>{children}</AuthProvider>
+            </SettingsProvider>
+          </ThemeProvider>
         <Toaster />
+        <GoogleAnalytics gaId="G-7XXV5BXWEF" />
       </body>
     </html>
   )

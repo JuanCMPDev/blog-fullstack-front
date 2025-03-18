@@ -24,6 +24,8 @@ import {
 } from "lucide-react"
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible"
 import { useAuth } from "@/lib/auth"
+import { useSettings } from "@/hooks/use-settings"
+import { ThemePreference } from "@/lib/types"
 
 interface NavItem {
   title: string
@@ -36,8 +38,9 @@ export function AdminSidebar() {
   const pathname = usePathname()
   const [mounted, setMounted] = useState(false)
   const { theme, setTheme } = useTheme()
+  const { updateSettings } = useSettings()
   const [openItems, setOpenItems] = useState<string[]>([])
-  const { user } = useAuth()
+  const { user, logout } = useAuth()
 
   // Logs para depuración
   console.log("AdminSidebar - user:", user);
@@ -47,6 +50,14 @@ export function AdminSidebar() {
   useEffect(() => {
     setMounted(true)
   }, [])
+
+  // Función para cambiar el tema sincrónicamente con las configuraciones
+  const toggleTheme = () => {
+    const newTheme = theme === "light" ? "dark" : "light";
+    setTheme(newTheme);
+    // Sincronizar con settings
+    updateSettings("themePreference", newTheme as ThemePreference);
+  };
 
   const sidebarNavItems: NavItem[] = useMemo(
     () => {
@@ -180,8 +191,9 @@ export function AdminSidebar() {
         <Button
           variant="outline"
           size="sm"
-          onClick={() => setTheme(theme === "light" ? "dark" : "light")}
+          onClick={toggleTheme}
           className="w-full justify-start hover:bg-accent hover:text-accent-foreground transition-colors"
+          aria-label={theme === "light" ? "Cambiar a modo oscuro" : "Cambiar a modo claro"}
         >
           {theme === "light" ? (
             <>
@@ -198,6 +210,7 @@ export function AdminSidebar() {
         <Button
           variant="outline"
           size="sm"
+          onClick={logout}
           className="w-full justify-start hover:bg-accent hover:text-accent-foreground transition-colors"
         >
           <LogOut className="h-4 w-4 mr-3" />

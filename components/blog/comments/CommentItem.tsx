@@ -100,16 +100,16 @@ const CommentItem: React.FC<CommentItemProps> = React.memo(
       handleReply();
     };
 
+    const avatarUrl = `https://${process.env.NEXT_PUBLIC_CLOUDFRONT_URL}/${safeComment.author.avatar}`;
+    
+    console.log(avatarUrl);
+
     return (
       <div className={`mb-4 ${indentationStyles()}`}>
         <div className="flex items-start space-x-4">
           <Avatar className="w-10 h-10 flex-shrink-0">
             <AvatarImage
-              src={
-                safeComment.author?.avatar
-                  ? `${process.env.NEXT_PUBLIC_COMPLETE_CLOUDFRONT_URL}/${safeComment.author.avatar}`
-                  : "/default-avatar.png"
-              }
+              src={safeComment.author?.avatar ? avatarUrl : "/default-avatar.png"}
               alt={safeComment.author?.name ?? "Usuario"}
             />
             <AvatarFallback>

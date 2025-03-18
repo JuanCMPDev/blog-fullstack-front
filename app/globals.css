@@ -419,3 +419,149 @@ textarea:focus {
     @apply bg-background text-foreground;
   }
 }
+
+/* Estilos para configuraciones de usuario */
+
+/* Tamaños de fuente */
+:root.text-size-small {
+  --font-size-base: 0.875rem; /* 14px */
+  --font-size-heading: 1.5rem;
+  --font-size-card-title: 1.25rem;
+  --font-size-label: 0.9rem;
+  --font-size-small-text: 0.8rem;
+  --line-height-base: 1.5;
+}
+
+:root.text-size-medium {
+  --font-size-base: 1rem; /* 16px */
+  --font-size-heading: 1.75rem;
+  --font-size-card-title: 1.5rem;
+  --font-size-label: 1rem;
+  --font-size-small-text: 0.875rem;
+  --line-height-base: 1.6;
+}
+
+:root.text-size-large {
+  --font-size-base: 1.125rem; /* 18px */
+  --font-size-heading: 2rem;
+  --font-size-card-title: 1.75rem;
+  --font-size-label: 1.125rem;
+  --font-size-small-text: 1rem;
+  --line-height-base: 1.7;
+}
+
+:root {
+  --font-size-base: var(--font-size-base, 1rem);
+  --font-size-heading: var(--font-size-heading, 1.75rem);
+  --font-size-card-title: var(--font-size-card-title, 1.5rem);
+  --font-size-label: var(--font-size-label, 1rem);
+  --font-size-small-text: var(--font-size-small-text, 0.875rem);
+  --line-height-base: var(--line-height-base, 1.6);
+}
+
+body {
+  font-size: var(--font-size-base);
+  line-height: var(--line-height-base);
+  transition: font-size 0.3s ease, line-height 0.3s ease;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-size: var(--font-size-heading);
+  transition: font-size 0.3s ease;
+}
+
+.card-title {
+  font-size: var(--font-size-card-title) !important;
+  transition: font-size 0.3s ease;
+}
+
+.label {
+  font-size: var(--font-size-label) !important;
+  transition: font-size 0.3s ease;
+}
+
+p, li, a, button, input, select, textarea {
+  transition: font-size 0.3s ease;
+}
+
+.text-sm, .text-muted-foreground {
+  font-size: var(--font-size-small-text) !important;
+  transition: font-size 0.3s ease;
+}
+
+/* Densidad de contenido */
+:root.density-comfortable {
+  --spacing-base: 1rem;
+  --card-padding: 1.5rem;
+  --container-padding: 2rem;
+  --element-spacing: 1rem;
+  --section-spacing: 2rem;
+  --button-padding: 0.5rem 1rem;
+}
+
+:root.density-compact {
+  --spacing-base: 0.75rem;
+  --card-padding: 1rem;
+  --container-padding: 1.5rem;
+  --element-spacing: 0.5rem;
+  --section-spacing: 1.5rem;
+  --button-padding: 0.375rem 0.75rem;
+}
+
+:root.density-spacious {
+  --spacing-base: 1.25rem;
+  --card-padding: 2rem;
+  --container-padding: 2.5rem;
+  --element-spacing: 1.5rem;
+  --section-spacing: 3rem;
+  --button-padding: 0.75rem 1.5rem;
+}
+
+:root {
+  --spacing-base: var(--spacing-base, 1rem);
+  --card-padding: var(--card-padding, 1.5rem);
+  --container-padding: var(--container-padding, 2rem);
+  --element-spacing: var(--element-spacing, 1rem);
+  --section-spacing: var(--section-spacing, 2rem);
+  --button-padding: var(--button-padding, 0.5rem 1rem);
+}
+
+/* Aplicar las variables a elementos comunes con transiciones */
+.card {
+  padding: var(--card-padding) !important;
+  transition: padding 0.3s ease;
+}
+
+.card-header {
+  padding: var(--card-padding) !important;
+  padding-bottom: calc(var(--card-padding) * 0.7) !important;
+  transition: padding 0.3s ease;
+}
+
+.card-content > div {
+  padding: calc(var(--card-padding) * 0.8) !important;
+  transition: padding 0.3s ease;
+}
+
+.card-footer {
+  padding: var(--card-padding) !important;
+  transition: padding 0.3s ease;
+}
+
+.container, .content-container {
+  padding-left: var(--container-padding);
+  padding-right: var(--container-padding);
+  transition: padding 0.3s ease;
+}
+
+/* Espaciado entre elementos */
+.content-container > * + * {
+  margin-top: var(--spacing-base);
+  transition: margin 0.3s ease;
+}
+
+/* Estilos específicos para botones según la densidad */
+.btn, .button {
+  padding: var(--button-padding);
+  transition: padding 0.3s ease;
+}

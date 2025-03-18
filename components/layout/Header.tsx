@@ -11,9 +11,12 @@ import { MobileMenu } from "@/components/layout/MobileMenu";
 import { UserMenu } from "@/components/auth/UserMenu";
 import { motion } from "framer-motion";
 import { useAuth } from "@/lib/auth";
+import { useSettings } from "@/hooks/use-settings";
+import { ThemePreference } from "@/lib/types";
 
 export function Header() {
   const { theme, setTheme } = useTheme();
+  const { settings, updateSettings } = useSettings();
   const [mounted, setMounted] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
@@ -30,6 +33,14 @@ export function Header() {
     window.addEventListener("scroll", handleScroll);
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
+
+  // Función para cambiar el tema sincrónicamente con las configuraciones
+  const toggleTheme = () => {
+    const newTheme = theme === "light" ? "dark" : "light";
+    setTheme(newTheme);
+    // Sincronizar con settings
+    updateSettings("themePreference", newTheme as ThemePreference);
+  };
 
   const isActive = (path: string) => pathname === path;
 
@@ -114,8 +125,9 @@ export function Header() {
             <Button
               variant="ghost"
               size="icon"
-              onClick={() => setTheme(theme === "light" ? "dark" : "light")}
+              onClick={toggleTheme}
               className="hidden md:inline-flex"
+              aria-label={theme === "light" ? "Cambiar a modo oscuro" : "Cambiar a modo claro"}
             >
               {theme === "light" ? (
                 <Moon className="h-5 w-5" />
@@ -146,7 +158,7 @@ export function Header() {
               </div>
             )}
 
-            <MobileMenu theme={theme} setTheme={setTheme} user={user} />
+            <MobileMenu theme={theme} setTheme={setTheme} user={user} settings={settings} updateSettings={updateSettings} />
           </div>
         </div>
       </div>

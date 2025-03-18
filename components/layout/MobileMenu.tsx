@@ -24,7 +24,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { motion } from "framer-motion"
 import { useAuth } from "@/lib/auth"
 import type React from "react" // Added import for React
-import { MobileMenuProps, NavItem } from "@/lib/types"
+import { MobileMenuProps, NavItem, ThemePreference } from "@/lib/types"
 
 const NavbarLinks: NavItem[] = [
   { id: "home", label: "Inicio", href: "/", icon: Home },
@@ -32,7 +32,7 @@ const NavbarLinks: NavItem[] = [
   { id: "contact", label: "Contacto", href: "/contacto", icon: Mail },
 ]
 
-export function MobileMenu({ theme, setTheme, user }: MobileMenuProps) {
+export function MobileMenu({ theme, setTheme, user, updateSettings }: MobileMenuProps) {
   const [open, setOpen] = useState(false)
   const { logout } = useAuth()
   const [searchTerm, setSearchTerm] = useState("")
@@ -45,6 +45,16 @@ export function MobileMenu({ theme, setTheme, user }: MobileMenuProps) {
       setOpen(false)
     }
   }
+
+  // Función para cambiar el tema sincrónicamente con las configuraciones
+  const toggleTheme = () => {
+    const newTheme = theme === "light" ? "dark" : "light";
+    setTheme(newTheme);
+    // Sincronizar con settings si está disponible
+    if (updateSettings) {
+      updateSettings("themePreference", newTheme as ThemePreference);
+    }
+  };
 
   const menuItems = [
     { icon: UserCircle, label: "Perfil", href: `/profile/${user?.nick}` },
@@ -160,7 +170,7 @@ export function MobileMenu({ theme, setTheme, user }: MobileMenuProps) {
           <div className="p-6 bg-gradient-to-r from-background/50 to-background mt-auto">
             <Button
               variant="outline"
-              onClick={() => setTheme(theme === "light" ? "dark" : "light")}
+              onClick={toggleTheme}
               className="w-full justify-start mb-4"
             >
               {theme === "light" ? (

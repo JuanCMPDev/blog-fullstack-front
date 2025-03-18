@@ -25,6 +25,12 @@ export enum PostStatus {
   SCHEDULED = "SCHEDULED"
 }
 
+export enum ThemePreference {
+  System = "system",
+  Light = "light",
+  Dark = "dark",
+}
+
 // Tipos base reutilizables
 export interface BaseUser {
   id: string
@@ -103,6 +109,8 @@ export interface MobileMenuProps {
   theme: string | undefined
   setTheme: (theme: string) => void
   user: UserProfile | null
+  settings?: Settings
+  updateSettings?: <K extends keyof Settings>(key: K, value: Settings[K]) => void
 }
 
 export interface BlogListProps {
@@ -268,10 +276,10 @@ export interface UseProfileReturn {
 
 // Configuración de usuario
 export type Settings = {
-  notifications: boolean
-  replyNotifications: boolean
   fontSize: FontSize
   postLayout: PostLayout
+  themePreference: ThemePreference
+  contentDensity: "comfortable" | "compact" | "spacious"
 }
 
 export const postSchema = z.object({

@@ -14,6 +14,7 @@ import { useToast } from "@/hooks/use-toast"
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Progress } from "@/components/ui/progress"
 import { useRouter } from "next/navigation"
+import { useReCaptcha } from '@/components/common/RecaptchaProvider'
 
 const passwordStrengthColor = ["bg-red-500", "bg-orange-500", "bg-yellow-500", "bg-lime-500", "bg-green-500"]
 
@@ -57,7 +58,7 @@ export default function SignUp() {
   const [passwordStrength, setPasswordStrength] = useState(0)
   const { toast } = useToast()
   const router = useRouter()
-  
+  const { executeRecaptcha } = useReCaptcha()
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -89,11 +90,19 @@ export default function SignUp() {
   async function onSubmit(data: z.infer<typeof formSchema>) {
     setIsLoading(true)
     try {
+      if (!executeRecaptcha) {
+        throw new Error("executeRecaptcha is not defined")
+      }
+      const recaptchaValue = await executeRecaptcha('register')
+      if (!recaptchaValue) {
+        throw new Error("No se pudo obtener el token de reCAPTCHA")
+      }
       const dataToSend = {
         name: data.name,
         nick: data.nick,
         email: data.email,
-        password: data.password
+        password: data.password,
+        recaptchaValue: recaptchaValue
       }
       console.log(dataToSend)
       const res = await fetch(process.env.NEXT_PUBLIC_API_URL + "auth/register", {
