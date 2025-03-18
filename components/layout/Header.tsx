@@ -84,7 +84,7 @@ export function Header() {
               <Code className="h-8 w-8 text-primary" />
             </motion.div>
             <span className="text-2xl font-bold text-foreground">
-              JCDev<span className="text-primary">Blog</span>
+              Techno<span className="text-primary">Espacio</span>
             </span>
           </Link>
 

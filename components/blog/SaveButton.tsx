@@ -59,7 +59,7 @@ export function SaveButton({ postId, size = "md", showText = true }: SaveButtonP
       <Bookmark 
         className={cn(
           sizeClasses[size],
-          saved ? "fill-foreground" : ""
+          saved ? "fill-primary stroke-foreground" : "stroke-foreground"
         )} 
       />
       {showText && <span className={size === "sm" ? "hidden sm:inline" : ""}>

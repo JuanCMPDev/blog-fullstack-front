@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, Suspense } from "react"
 import { useSearchParams } from "next/navigation"
 import { motion } from "framer-motion"
 import Link from "next/link"
@@ -8,7 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/componen
 import { RequestResetPassword } from "@/components/auth/RequestResetPassword"
 import { ResetPasswordForm } from "@/components/auth/ResetPasswordForm"
 
-export default function ResetPassword() {
+function ResetPasswordContent() {
   const searchParams = useSearchParams()
   const [token, setToken] = useState<string | null>(null)
 
@@ -47,6 +47,14 @@ export default function ResetPassword() {
         </Card>
       </motion.div>
     </div>
+  )
+}
+
+export default function ResetPassword() {
+  return (
+    <Suspense fallback={<div className="p-12 text-center">Cargando...</div>}>
+      <ResetPasswordContent />
+    </Suspense>
   )
 }
 

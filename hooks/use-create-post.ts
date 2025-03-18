@@ -123,7 +123,6 @@ export const useCreatePost = (initialTags: string[]) => {
       }
 
       const createdPost = await response.json()
-      console.log('Post creado:', createdPost)
 
       // Mensaje de éxito
       toast({
@@ -137,7 +136,7 @@ export const useCreatePost = (initialTags: string[]) => {
       if (isDraft) {
         router.push('/admin/posts');
       } else {
-        router.push(`/posts/${createdPost.slug}`);
+        router.push(`/post/${createdPost.slug}`);
       }
       
       return createdPost

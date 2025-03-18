@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button"
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form"
 import { Input } from "@/components/ui/input"
 import { useToast } from "@/hooks/use-toast"
+import { useReCaptcha } from '@/components/common/RecaptchaProvider'
 
 const passwordSchema = z
   .object({
@@ -33,6 +34,7 @@ export function ResetPasswordForm({ token }: ResetPasswordFormProps) {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
   const { toast } = useToast()
   const router = useRouter()
+  const { executeRecaptcha } = useReCaptcha()
 
   const form = useForm<z.infer<typeof passwordSchema>>({
     resolver: zodResolver(passwordSchema),
@@ -45,11 +47,22 @@ export function ResetPasswordForm({ token }: ResetPasswordFormProps) {
   async function onSubmit(values: z.infer<typeof passwordSchema>) {
     setIsLoading(true)
     try {
+      if (!executeRecaptcha) {
+        throw new Error("executeRecaptcha is not defined")
+      }
+      const recaptchaValue = await executeRecaptcha('resetPassword')
+      if (!recaptchaValue) {
+        throw new Error("No se pudo obtener el token de reCAPTCHA")
+      }
 
       const response = await fetch(process.env.NEXT_PUBLIC_API_URL + 'auth/reset-password', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ token, newPassword: values.newPassword }),
+        body: JSON.stringify({ 
+          token, 
+          newPassword: values.newPassword,
+          recaptchaValue: recaptchaValue
+        }),
       })
       if (!response.ok) throw new Error('Failed to reset password')
 

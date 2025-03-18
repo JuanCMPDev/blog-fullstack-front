@@ -14,8 +14,9 @@ const inter = Inter({
 })
 
 export const metadata: Metadata = {
-  title: 'JCDevBlog',
-  description: 'Un blog para compartir conocimientos de desarrollo',
+  title: 'Techno Espacio',
+  description: 'Un blog de tecnología, programación y desarrollo web.',
+
 }
 
 export default function RootLayout({

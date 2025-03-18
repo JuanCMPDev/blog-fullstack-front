@@ -3,9 +3,9 @@ import { Button } from "@/components/ui/button"
 import { Github, Linkedin, Twitter } from "lucide-react"
 
 const socialLinks = [
-  { name: "GitHub", icon: Github, url: "https://github.com/yourusername" },
-  { name: "LinkedIn", icon: Linkedin, url: "https://linkedin.com/in/yourusername" },
-  { name: "Twitter", icon: Twitter, url: "https://twitter.com/yourusername" },
+  { name: "GitHub", icon: Github, url: "https://github.com/JuanCMPDev" },
+  { name: "LinkedIn", icon: Linkedin, url: "https://linkedin.com/in/juan-carlos-mu%C3%B1oz/" },
+  { name: "Twitter", icon: Twitter, url: "https://twitter.com/juancm_dev" },
 ]
 
 export function SocialLinks() {

@@ -164,9 +164,9 @@ export function AdminSidebar() {
       <div className="flex h-16 items-center justify-center bg-accent/50">
         <Link href="/admin" className="flex items-center space-x-2">
           <div className="w-6 h-6 bg-primary rounded-full flex items-center justify-center">
-            <span className="text-sm font-bold text-primary-foreground">A</span>
+            <span className="text-sm font-bold text-primary-foreground">T</span>
           </div>
-          <span className="text-lg font-semibold text-primary">Panel de Admin</span>
+          <span className="text-lg font-semibold text-primary">Techno Espacio</span>
         </Link>
       </div>
       <ScrollArea className="flex-1 py-4 px-3">

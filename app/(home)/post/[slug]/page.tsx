@@ -822,7 +822,7 @@ export default function PostPage() {
               </Button>
             </div>
             <div className="flex items-center space-x-2 sm:space-x-4">
-              <ShareMenu url={`https://yourblog.com/post/${post.id}`} title={post.title} />
+              <ShareMenu url={`https://technoespacio.com/post/${post.slug}`} title={post.title} />
               <SaveButton postId={post.id} size="sm" />
               {isAdmin() && (
                 <Button 

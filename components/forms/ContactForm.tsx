@@ -10,8 +10,28 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { useToast } from "@/hooks/use-toast"
-import { sendContactForm } from "@/lib/actions"
 import { Loader2, MessageSquare, Send } from "lucide-react"
+import { customFetch } from "@/lib/customFetch"
+
+const sendContactForm = async (data: {
+  name: string;
+  email: string;
+  message: string;
+}) => {
+  const response = await customFetch(`${process.env.NEXT_PUBLIC_API_URL}contact`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(data),
+  });
+
+  if (!response.ok) {
+    throw new Error('Error al enviar el mensaje');
+  }
+
+  return response.json();
+};
 
 const formSchema = z.object({
   name: z.string().min(2, {

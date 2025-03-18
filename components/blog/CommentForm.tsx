@@ -97,7 +97,7 @@ const CommentForm: React.FC<CommentFormProps> = ({ onSubmitComment, isLoading: e
             disabled={submittingComment}
           />
           <div className="flex justify-between items-center">
-            <div className="text-xs text-muted-foreground">
+            <div className="hidden md:block text-xs text-muted-foreground">
               Presiona Ctrl+Enter para enviar
             </div>
             <Button 

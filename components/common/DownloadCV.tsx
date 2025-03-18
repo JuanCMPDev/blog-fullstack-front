@@ -9,7 +9,7 @@ export function DownloadCV() {
         className="w-full bg-primary text-primary-foreground transition-all duration-300 shadow-lg hover:shadow-xl rounded-lg"
         asChild
       >
-        <a href="/path-to-your-cv.pdf" download>
+        <a href="/Curriculum-Vitae-2025ESP.pdf" download>
           <FileDown className="mr-2 h-4 w-4" /> Descargar CV
         </a>
       </Button>

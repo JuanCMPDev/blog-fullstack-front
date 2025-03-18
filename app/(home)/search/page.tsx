@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useMemo, useCallback } from "react"
+import { useState, useEffect, useMemo, useCallback, Suspense } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import { BlogList } from "@/components/blog/BlogList"
 import { Pagination } from "@/components/common/Pagination"
@@ -37,7 +37,7 @@ const sortOptionsMap = {
   comments: "comments"
 };
 
-export default function SearchPage() {
+function SearchPageContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const query = searchParams.get("q") || ""
@@ -249,8 +249,8 @@ export default function SearchPage() {
                         <Button
                           type="button"
                           variant="ghost"
-                          size="sm"
-                          className="ml-2 h-4 w-4 p-0"
+                          size="icon"
+                          className="h-4 w-4 ml-1 p-0 hover:bg-transparent"
                           onClick={() => handleTagRemove(tag)}
                         >
                           <X className="h-3 w-3" />
@@ -258,70 +258,83 @@ export default function SearchPage() {
                       </Badge>
                     ))}
                   </div>
-                  <div className="flex flex-col sm:flex-row items-center gap-4">
-                    <div className="w-full sm:w-1/3">
-                      <Select value={sortBy} onValueChange={handleSortChange}>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Ordenar por" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="date">Fecha</SelectItem>
-                          <SelectItem value="votes">Votos</SelectItem>
-                          <SelectItem value="comments">Comentarios</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <Button variant="outline" onClick={toggleSortOrder} className="w-full sm:w-auto">
-                      {sortOrder === "asc" ? <SortAsc className="mr-2" /> : <SortDesc className="mr-2" />}
-                      {sortOrder === "asc" ? "Ascendente" : "Descendente"}
-                    </Button>
-                  </div>
                 </form>
               </CardContent>
             </Card>
 
-            {(query || selectedTags.length > 0) && (
-              <p className="text-lg mb-4">
-                Mostrando resultados para:
-                <span className="font-semibold">
-                  {query && ` "${query}"`}
-                  {selectedTags.length > 0 && ` en ${selectedTags.join(", ")}`}
-                </span>
-              </p>
-            )}
-
-            <p className="text-sm text-muted-foreground mb-4">{totalResults} resultados encontrados</p>
+            <div className="mb-6 flex justify-between items-center">
+              <div className="flex items-center gap-2">
+                <p className="text-muted-foreground text-sm">
+                  {isLoading 
+                    ? "Cargando resultados..." 
+                    : totalResults === 0 
+                      ? "No se encontraron resultados" 
+                      : `${totalResults} resultados encontrados`
+                  }
+                </p>
+              </div>
+              <div className="flex items-center gap-2">
+                <Select value={sortBy} onValueChange={(value) => handleSortChange(value as SortOption)}>
+                  <SelectTrigger className="w-[160px]">
+                    <SelectValue placeholder="Ordenar por" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="date">Fecha</SelectItem>
+                    <SelectItem value="votes">Votos</SelectItem>
+                    <SelectItem value="comments">Comentarios</SelectItem>
+                  </SelectContent>
+                </Select>
+                <Button 
+                  variant="outline" 
+                  size="icon" 
+                  onClick={toggleSortOrder}
+                  title={sortOrder === "asc" ? "Ascendente" : "Descendente"}
+                >
+                  {sortOrder === "asc" ? <SortAsc /> : <SortDesc />}
+                </Button>
+              </div>
+            </div>
 
             <AnimatePresence mode="wait">
               <motion.div
-                key={currentPage + query + selectedTags.join(",") + sortBy + sortOrder}
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -20 }}
+                key={`${query}-${selectedTags.join('')}-${currentPage}-${sortBy}-${sortOrder}`}
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
                 transition={{ duration: 0.3 }}
               >
-                <BlogList posts={posts} isLoading={isLoading} />
+                <BlogList 
+                  posts={posts} 
+                  isLoading={isLoading}
+                />
               </motion.div>
             </AnimatePresence>
 
             {totalPages > 1 && (
-              <Pagination currentPage={currentPage} totalPages={totalPages} onPageChange={handlePageChange} className="mt-8" />
-            )}
-
-            {!isLoading && posts.length === 0 && (
-              <p className="text-center text-lg text-muted-foreground mt-8">
-                No se encontraron resultados para tu búsqueda.
-              </p>
+              <div className="mt-8">
+                <Pagination 
+                  currentPage={currentPage} 
+                  totalPages={totalPages}
+                  onPageChange={handlePageChange}
+                />
+              </div>
             )}
           </main>
+
           <aside className="w-full lg:w-1/3">
-            <div className="lg lg:top-24">
-              <Sidebar />
-            </div>
+            <Sidebar />
           </aside>
         </div>
       </div>
     </div>
+  )
+}
+
+export default function SearchPage() {
+  return (
+    <Suspense fallback={<div className="p-12 text-center">Cargando búsqueda...</div>}>
+      <SearchPageContent />
+    </Suspense>
   )
 }
 
