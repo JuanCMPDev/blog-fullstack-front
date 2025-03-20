@@ -1,0 +1,27 @@
+{
+  "indexing-api": {
+    "allow-robots": true,
+    "sitemap": "https://technoespacio.com/sitemap.xml",
+    "updated": "2024-03-30",
+    "request-indexing": true
+  },
+  "monitoring": {
+    "critical-urls": [
+      "/",
+      "/about",
+      "/post/*",
+      "/contact"
+    ]
+  },
+  "performance": {
+    "lcp-elements": [
+      ".hero-section",
+      ".blog-title",
+      ".post-cover-image"
+    ],
+    "cls-elements": [
+      ".navbar",
+      ".blog-list"
+    ]
+  }
+} 

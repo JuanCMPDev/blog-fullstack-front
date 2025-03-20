@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef, memo } from "react"
 import Image from "next/image"
 import { useParams, useRouter } from "next/navigation"
+import Head from "next/head"
 import { format } from "date-fns"
 import { es } from "date-fns/locale"
 import { MessageCircle, Calendar, Clock, Settings, AlertCircle } from "lucide-react"
@@ -25,6 +26,7 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { motion } from "framer-motion"
 import ReactMarkdown from "react-markdown"
 import remarkGfm from "remark-gfm"
+import { StructuredData } from "@/components/blog/StructuredData"
 
 // Componente dedicado para renderizar Markdown con SyntaxHighlighter para código
 const MarkdownRenderer = memo(({ content }: { content: string }) => {
@@ -221,14 +223,49 @@ const MarkdownRenderer = memo(({ content }: { content: string }) => {
 
 MarkdownRenderer.displayName = 'MarkdownRenderer';
 
+// Función para optimizar las imágenes para compartir en redes sociales
+const getOptimizedImageUrl = (imageUrl: string, siteUrl: string) => {
+  // Si la imagen es relativa, convertirla en absoluta
+  if (imageUrl && !imageUrl.startsWith('http')) {
+    if (imageUrl.startsWith('/')) {
+      imageUrl = `${siteUrl}${imageUrl}`
+    } else {
+      imageUrl = `${siteUrl}/${imageUrl}`
+    }
+  }
+  
+  // Si la imagen ya es servida por un CDN de imágenes (como Cloudinary, Imgix, etc.)
+  // podríamos añadir parámetros para optimizarla
+  if (imageUrl.includes('cloudinary.com')) {
+    // Por ejemplo, para Cloudinary: solicitar una imagen optimizada para redes sociales
+    // w_1200,h_630,c_fill,q_auto,f_auto establece ancho, alto, recorte, calidad auto y formato auto
+    return imageUrl.replace('/upload/', '/upload/w_1200,h_630,c_fill,q_auto,f_auto/');
+  }
+  
+  // En caso de que se use otro servicio de optimización de imágenes, se podría añadir aquí
+  
+  return imageUrl;
+}
+
 export default function PostPage() {
-  const { slug } = useParams()
+  const { slug } = useParams<{ slug: string }>()
+  const router = useRouter()
+  const commentsRef = useRef<HTMLDivElement>(null)
   const [post, setPost] = useState<Post | null>(null)
   const [isLoading, setIsLoading] = useState(true)
-  const router = useRouter()
-  const { isAdmin, isEditor } = useAuth()
-  const commentSectionRef = useRef<HTMLDivElement>(null)
+  const { user } = useAuth()
   const { toast } = useToast()
+
+  // SEO - Metadatos dinámicos para este post específico
+  const [postMetadata, setPostMetadata] = useState({
+    title: 'Techno Espacio',
+    description: 'Artículo sobre tecnología y programación',
+    image: '/og-image.jpg',
+    author: 'Techno Espacio',
+    publishDate: '',
+    modifiedDate: '',
+    tags: [] as string[]
+  })
 
   useEffect(() => {
     const fetchPost = async () => {
@@ -257,7 +294,8 @@ export default function PostPage() {
         const postData = await response.json()
         
         // Verificar si el post no está publicado y el usuario no tiene permisos
-        if (postData.status !== "PUBLISHED" && !isAdmin() && !isEditor()) {
+        if (postData.status !== "PUBLISHED" && 
+            (!user || (user && !user.role?.includes('ADMIN') && !user.role?.includes('EDITOR')))) {
           toast({
             title: "Acceso restringido",
             description: "Este post no está disponible públicamente",
@@ -268,6 +306,26 @@ export default function PostPage() {
         }
         
         setPost(postData)
+        
+        // URL base del sitio
+        const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://technoespacio.com'
+        
+        // Obtener URL de imagen optimizada para compartir
+        const coverImageUrl = getOptimizedImageUrl(
+          postData.coverImage || '/og-image.jpg',
+          siteUrl
+        );
+        
+        // Actualizar metadatos para SEO
+        setPostMetadata({
+          title: `${postData.title} | Techno Espacio`,
+          description: postData.excerpt || postData.title,
+          image: coverImageUrl,
+          author: postData.author?.name || 'Techno Espacio',
+          publishDate: postData.createdAt,
+          modifiedDate: postData.updatedAt,
+          tags: postData.tags?.map((tag: { name: string }) => tag.name) || []
+        })
       } catch (error) {
         console.error('Error al obtener el post:', error)
         toast({
@@ -284,7 +342,7 @@ export default function PostPage() {
     if (slug) {
       fetchPost()
     }
-  }, [slug, router, toast, isAdmin, isEditor])
+  }, [slug, router, toast, user])
 
   const renderContent = (content: string) => {
     if (!content) return null;
@@ -673,8 +731,8 @@ export default function PostPage() {
   }
 
   const scrollToComments = () => {
-    if (commentSectionRef.current) {
-      commentSectionRef.current.scrollIntoView({ behavior: "smooth" })
+    if (commentsRef.current) {
+      commentsRef.current.scrollIntoView({ behavior: "smooth" })
     }
   }
 
@@ -717,133 +775,185 @@ export default function PostPage() {
   }
 
   return (
-    <div className="container max-w-4xl px-4 py-8 mx-auto">
-      {isLoading ? (
-        <div className="space-y-8">
-          <div className="w-2/3">
-            <Skeleton className="h-10 w-full" />
+    <>
+      <Head>
+        {/* Metadatos básicos */}
+        <title>{postMetadata.title}</title>
+        <meta name="description" content={postMetadata.description} />
+        
+        {/* Open Graph / Facebook */}
+        <meta property="og:type" content="article" />
+        <meta property="og:title" content={postMetadata.title} />
+        <meta property="og:description" content={postMetadata.description} />
+        <meta property="og:image" content={postMetadata.image} />
+        <meta property="og:image:width" content="1200" />
+        <meta property="og:image:height" content="630" />
+        <meta property="og:url" content={`${process.env.NEXT_PUBLIC_SITE_URL || 'https://technoespacio.com'}/post/${slug}`} />
+        <meta property="og:site_name" content="Techno Espacio" />
+        
+        {/* Twitter */}
+        <meta name="twitter:card" content="summary_large_image" />
+        <meta name="twitter:title" content={postMetadata.title} />
+        <meta name="twitter:description" content={postMetadata.description} />
+        <meta name="twitter:image" content={postMetadata.image} />
+        <meta name="twitter:site" content="@technoespacio" />
+        <meta name="twitter:creator" content="@technoespacio" />
+        
+        {/* Pinterest */}
+        <meta name="pinterest:description" content={postMetadata.description} />
+        <meta name="pinterest:image" content={postMetadata.image} />
+        
+        {/* WhatsApp / Telegram mejorado */}
+        <meta property="og:image:alt" content={`Imagen de portada para ${postMetadata.title}`} />
+        
+        {/* Artículo específico */}
+        {postMetadata.publishDate && (
+          <meta property="article:published_time" content={postMetadata.publishDate} />
+        )}
+        {postMetadata.modifiedDate && (
+          <meta property="article:modified_time" content={postMetadata.modifiedDate} />
+        )}
+        {postMetadata.tags.map((tag, index) => (
+          <meta key={index} property="article:tag" content={tag} />
+        ))}
+      </Head>
+      
+      {/* Datos estructurados para SEO */}
+      {post && (
+        <StructuredData 
+          post={post} 
+          url={process.env.NEXT_PUBLIC_SITE_URL || 'https://technoespacio.com'} 
+        />
+      )}
+      
+      <div className="container max-w-4xl px-4 py-8 mx-auto">
+        {isLoading ? (
+          <div className="space-y-8">
+            <div className="w-2/3">
+              <Skeleton className="h-10 w-full" />
+            </div>
+            <Skeleton className="h-[400px] w-full" />
+            <div className="space-y-2">
+              <Skeleton className="h-4 w-full" />
+              <Skeleton className="h-4 w-full" />
+              <Skeleton className="h-4 w-5/6" />
+            </div>
           </div>
-          <Skeleton className="h-[400px] w-full" />
-          <div className="space-y-2">
-            <Skeleton className="h-4 w-full" />
-            <Skeleton className="h-4 w-full" />
-            <Skeleton className="h-4 w-5/6" />
-          </div>
-        </div>
-      ) : post ? (
-        <motion.article
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5 }}
-          className="space-y-6"
-        >
-          {/* Status Banner para posts no publicados */}
-          {isAdmin() || isEditor() ? getStatusBanner() : null}
-          
-          <div className="relative w-full aspect-video mb-8">
-            <Image
-              src={post.coverImage || "/placeholder.svg"}
-              alt={post.title}
-              fill
-              className="object-cover rounded-lg shadow-lg"
-              priority
-            />
-          </div>
-          
-          <h1 className="text-3xl md:text-4xl font-bold tracking-tight">{post.title}</h1>
-          <div className="flex flex-wrap items-center gap-4 text-sm text-muted-foreground">
-            <div className="flex items-center">
-              <Avatar className="mr-2 h-8 w-8">
-                <AvatarImage
-                  src={getAvatarUrl(post.author?.avatar)}
-                  alt={post.author?.name}
-                />
-                <AvatarFallback>
-                  {post.author?.name
-                    .split(" ")
-                    .map((n) => n[0])
-                    .join("")}
-                </AvatarFallback>
-              </Avatar>
-              <div>
-                <span className="font-medium text-foreground">
-                  {post.author?.name}
-                </span>
+        ) : post ? (
+          <motion.article
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5 }}
+            className="space-y-6"
+          >
+            {/* Status Banner para posts no publicados */}
+            {user && user.role?.includes('ADMIN') || user?.role?.includes('EDITOR') ? getStatusBanner() : null}
+            
+            <div className="relative w-full aspect-video mb-8">
+              <Image
+                src={post.coverImage || "/placeholder.svg"}
+                alt={post.title}
+                fill
+                className="object-cover rounded-lg shadow-lg"
+                priority
+              />
+            </div>
+            
+            <h1 className="text-3xl md:text-4xl font-bold tracking-tight">{post.title}</h1>
+            <div className="flex flex-wrap items-center gap-4 text-sm text-muted-foreground">
+              <div className="flex items-center">
+                <Avatar className="mr-2 h-8 w-8">
+                  <AvatarImage
+                    src={getAvatarUrl(post.author?.avatar)}
+                    alt={post.author?.name}
+                  />
+                  <AvatarFallback>
+                    {post.author?.name
+                      .split(" ")
+                      .map((n) => n[0])
+                      .join("")}
+                  </AvatarFallback>
+                </Avatar>
+                <div>
+                  <span className="font-medium text-foreground">
+                    {post.author?.name}
+                  </span>
+                </div>
+              </div>
+              <div className="flex items-center">
+                <Calendar className="mr-1 h-4 w-4" />
+                {(() => {
+                  try {
+                    // Usar publishDate para posts publicados, o createdAt como alternativa
+                    const dateToUse = post.publishDate || post.createdAt;
+                    if (dateToUse && dateToUse !== 'null') {
+                      return format(
+                        new Date(dateToUse),
+                        "d 'de' MMMM 'de' yyyy",
+                        { locale: es }
+                      );
+                    }
+                    return 'Fecha no disponible';
+                  } catch (error) {
+                    console.error("Error al formatear la fecha del post:", error);
+                    return 'Fecha no disponible';
+                  }
+                })()}
+              </div>
+              <div className="flex items-center">
+                <Clock className="mr-1 h-4 w-4" />
+                {post.readTime || 0} min de lectura
               </div>
             </div>
-            <div className="flex items-center">
-              <Calendar className="mr-1 h-4 w-4" />
-              {(() => {
-                try {
-                  // Usar publishDate para posts publicados, o createdAt como alternativa
-                  const dateToUse = post.publishDate || post.createdAt;
-                  if (dateToUse && dateToUse !== 'null') {
-                    return format(
-                      new Date(dateToUse),
-                      "d 'de' MMMM 'de' yyyy",
-                      { locale: es }
-                    );
-                  }
-                  return 'Fecha no disponible';
-                } catch (error) {
-                  console.error("Error al formatear la fecha del post:", error);
-                  return 'Fecha no disponible';
-                }
-              })()}
+            {/* Tags del post */}
+            <div className="flex flex-wrap gap-2 mb-4">
+              {post.tags.map((tag, index) => (
+                <Tag key={index} name={tag} />
+              ))}
             </div>
-            <div className="flex items-center">
-              <Clock className="mr-1 h-4 w-4" />
-              {post.readTime || 0} min de lectura
-            </div>
-          </div>
-          {/* Tags del post */}
-          <div className="flex flex-wrap gap-2 mb-4">
-            {post.tags.map((tag, index) => (
-              <Tag key={index} name={tag} />
-            ))}
-          </div>
-          {renderContent(post.content)}
-          <div className="flex items-center justify-between border-t border-b py-4 mb-8 bg-background/90">
-            <div className="flex items-center space-x-2 sm:space-x-4">
-              <LikeButton 
-                postId={post.id} 
-                initialLikesCount={post.likes} 
-                size="sm"
-              />
-              <Button variant="ghost" size="sm" className="text-xs sm:text-sm px-2 sm:px-3" onClick={scrollToComments}>
-                <MessageCircle className="h-4 w-4 mr-1 sm:mr-2" />
-                <span>
-                  {typeof post.comments === 'number' 
-                    ? post.comments 
-                    : (post.comments && Array.isArray(post.comments))
-                      ? (post.comments as Comment[]).length
-                      : 0}
-                </span>
-              </Button>
-            </div>
-            <div className="flex items-center space-x-2 sm:space-x-4">
-              <ShareMenu url={`https://technoespacio.com/post/${post.slug}`} title={post.title} />
-              <SaveButton postId={post.id} size="sm" />
-              {isAdmin() && (
-                <Button 
-                  variant="ghost" 
-                  size="sm" 
-                  className="text-xs sm:text-sm px-2 sm:px-3"
-                  onClick={() => router.push(`/admin/posts/edit/${post.id}`)}
-                  title="Editar este post"
-                >
-                  <Settings className="h-4 w-4 sm:mr-2" />
-                  <span className="hidden sm:inline">Administrar</span>
+            {renderContent(post.content)}
+            <div className="flex items-center justify-between border-t border-b py-4 mb-8 bg-background/90">
+              <div className="flex items-center space-x-2 sm:space-x-4">
+                <LikeButton 
+                  postId={post.id} 
+                  initialLikesCount={post.likes} 
+                  size="sm"
+                />
+                <Button variant="ghost" size="sm" className="text-xs sm:text-sm px-2 sm:px-3" onClick={scrollToComments}>
+                  <MessageCircle className="h-4 w-4 mr-1 sm:mr-2" />
+                  <span>
+                    {typeof post.comments === 'number' 
+                      ? post.comments 
+                      : (post.comments && Array.isArray(post.comments))
+                        ? (post.comments as Comment[]).length
+                        : 0}
+                  </span>
                 </Button>
-              )}
+              </div>
+              <div className="flex items-center space-x-2 sm:space-x-4">
+                <ShareMenu url={`https://technoespacio.com/post/${post.slug}`} title={post.title} />
+                <SaveButton postId={post.id} size="sm" />
+                {user && user.role?.includes('ADMIN') && (
+                  <Button 
+                    variant="ghost" 
+                    size="sm" 
+                    className="text-xs sm:text-sm px-2 sm:px-3"
+                    onClick={() => router.push(`/admin/posts/edit/${post.id}`)}
+                    title="Editar este post"
+                  >
+                    <Settings className="h-4 w-4 sm:mr-2" />
+                    <span className="hidden sm:inline">Administrar</span>
+                  </Button>
+                )}
+              </div>
             </div>
-          </div>
-          <div ref={commentSectionRef}>
-            <CommentsSection postId={post.id} />
-          </div>
-        </motion.article>
-      ) : null}
-    </div>
+            <div ref={commentsRef}>
+              <CommentsSection postId={post.id} />
+            </div>
+          </motion.article>
+        ) : null}
+      </div>
+    </>
   )
 }
 
