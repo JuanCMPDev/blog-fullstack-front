@@ -223,30 +223,6 @@ const MarkdownRenderer = memo(({ content }: { content: string }) => {
 
 MarkdownRenderer.displayName = 'MarkdownRenderer';
 
-// Función para optimizar las imágenes para compartir en redes sociales
-const getOptimizedImageUrl = (imageUrl: string, siteUrl: string) => {
-  // Si la imagen es relativa, convertirla en absoluta
-  if (imageUrl && !imageUrl.startsWith('http')) {
-    if (imageUrl.startsWith('/')) {
-      imageUrl = `${siteUrl}${imageUrl}`
-    } else {
-      imageUrl = `${siteUrl}/${imageUrl}`
-    }
-  }
-  
-  // Si la imagen ya es servida por un CDN de imágenes (como Cloudinary, Imgix, etc.)
-  // podríamos añadir parámetros para optimizarla
-  if (imageUrl.includes('cloudinary.com')) {
-    // Por ejemplo, para Cloudinary: solicitar una imagen optimizada para redes sociales
-    // w_1200,h_630,c_fill,q_auto,f_auto establece ancho, alto, recorte, calidad auto y formato auto
-    return imageUrl.replace('/upload/', '/upload/w_1200,h_630,c_fill,q_auto,f_auto/');
-  }
-  
-  // En caso de que se use otro servicio de optimización de imágenes, se podría añadir aquí
-  
-  return imageUrl;
-}
-
 export default function PostPage() {
   const { slug } = useParams<{ slug: string }>()
   const router = useRouter()
@@ -310,17 +286,11 @@ export default function PostPage() {
         // URL base del sitio
         const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://technoespacio.com'
         
-        // Obtener URL de imagen optimizada para compartir
-        const coverImageUrl = getOptimizedImageUrl(
-          postData.coverImage || '/og-image.jpg',
-          siteUrl
-        );
-        
         // Actualizar metadatos para SEO
         setPostMetadata({
           title: `${postData.title} | Techno Espacio`,
           description: postData.excerpt || postData.title,
-          image: coverImageUrl,
+          image: `${siteUrl}/tecno-espacio.png`,
           author: postData.author?.name || 'Techno Espacio',
           publishDate: postData.createdAt,
           modifiedDate: postData.updatedAt,
