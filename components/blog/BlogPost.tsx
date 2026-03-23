@@ -1,6 +1,6 @@
 import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { ThumbsUp, MessageSquare, ArrowRight, Calendar, Clock } from "lucide-react"
+import { ThumbsUp, MessageSquare, ArrowRight, Calendar, Clock, BookOpen } from "lucide-react"
 import Image from "next/image"
 import Link from "next/link"
 import { format } from "date-fns"
@@ -21,10 +21,12 @@ export function BlogPost({
   author,
   publishDate,
   readTime,
+  course,
+  courseOrder,
 }: Post) {
   const isMobile = useMediaQuery("(max-width: 640px)")
   return (
-    <Card className="flex flex-col h-full overflow-hidden transition-all duration-300 hover:shadow-lg hover:-translate-y-1">
+    <Card className="flex flex-col h-full overflow-hidden glass-card transition-all duration-300 hover:shadow-lg hover:shadow-primary/5 border-border/30">
       <div className="relative w-full pt-[56.25%] overflow-hidden group">
         <Link
           href={`/post/${slug}`}
@@ -40,10 +42,24 @@ export function BlogPost({
           />
           <div className="absolute inset-0 bg-black opacity-0 group-hover:opacity-10 transition-opacity duration-300" />
         </Link>
+        {course && (
+          <Link
+            href={`/courses/${course.slug}`}
+            className="absolute top-2.5 left-2.5 flex items-center gap-1.5 bg-background/85 backdrop-blur-sm text-xs font-medium px-2.5 py-1 rounded-full border border-border/30 hover:bg-background transition-colors"
+          >
+            <BookOpen className="h-3 w-3 text-primary" />
+            <span className="text-foreground/90 max-w-[120px] truncate">{course.title}</span>
+            {courseOrder != null && (
+              <span className="flex items-center justify-center bg-primary text-primary-foreground text-[10px] font-bold h-4 min-w-4 rounded-full px-1">
+                {courseOrder}
+              </span>
+            )}
+          </Link>
+        )}
       </div>
       <CardHeader className="pb-2">
         <Link href={`/post/${slug}`} className="hover:underline">
-          <h3 className="text-xl font-semibold leading-tight tracking-tight line-clamp-2">{title}</h3>
+          <h3 className="text-xl font-headline font-semibold leading-tight tracking-tight line-clamp-2">{title}</h3>
         </Link>
       </CardHeader>
       <CardContent className="flex-grow">
@@ -66,7 +82,7 @@ export function BlogPost({
           </div>
         </div>
       </CardContent>
-      <CardFooter className="flex justify-between items-center pt-4 border-t">
+      <CardFooter className="flex justify-between items-center pt-4 border-t border-border/30">
         <div className="flex space-x-4 text-sm text-muted-foreground">
           <span className="flex items-center">
             <ThumbsUp className="mr-1 h-4 w-4" />

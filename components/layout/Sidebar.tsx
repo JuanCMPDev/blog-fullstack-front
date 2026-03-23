@@ -3,12 +3,13 @@
 import React, { useEffect, useState } from "react"
 import Link from "next/link"
 import Image from "next/image"
-import { TrendingUp, Hash } from "lucide-react"
+import { TrendingUp, Hash, ArrowRight, ThumbsUp } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardHeader, CardContent, CardTitle } from "@/components/ui/card"
 import { getRecommendedPosts } from "@/lib/services/postService"
 import type { Post } from "@/lib/types"
 import { customFetch } from "@/lib/customFetch"
+import { buildApiUrl } from "@/lib/api"
 import { Skeleton } from "@/components/ui/skeleton"
 
 interface Category {
@@ -28,15 +29,6 @@ export function Sidebar() {
   const [loading, setLoading] = useState<boolean>(true)
   const [loadingTags, setLoadingTags] = useState<boolean>(true)
 
-  // Función para obtener la URL base de la API
-  const getBaseUrl = () => {
-    let apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'
-    if (apiUrl.endsWith('/')) {
-      apiUrl = apiUrl.slice(0, -1)
-    }
-    return apiUrl
-  }
-
   useEffect(() => {
     const fetchRecommendedPosts = async () => {
       try {
@@ -53,22 +45,20 @@ export function Sidebar() {
     const fetchPopularTags = async () => {
       try {
         setLoadingTags(true)
-        const apiUrl = getBaseUrl()
-        const response = await customFetch(`${apiUrl}/posts/popular-tags`)
-        
+        const response = await customFetch(buildApiUrl("posts/popular-tags"))
+
         if (!response.ok) {
           throw new Error(`Error al cargar los tags populares: ${response.statusText}`)
         }
-        
+
         const data: PopularTag[] = await response.json()
-        
-        // Transformar datos al formato que espera el componente
+
         const formattedTags = data.map(item => ({
           name: item.tag,
           slug: item.tag.toLowerCase(),
           count: item.count
         }))
-        
+
         setPopularTags(formattedTags)
       } catch (error) {
         console.error("Error al obtener tags populares:", error)
@@ -84,85 +74,96 @@ export function Sidebar() {
 
   return (
     <div className="space-y-6">
-      {/* Sección de Posts Recomendados */}
-      <Card className="overflow-hidden border-border/50">
-        <CardHeader className="bg-muted/50 pb-3 pt-4 px-5">
-          <CardTitle className="text-base font-semibold flex items-center">
-            <TrendingUp className="w-4 h-4 mr-2 text-primary" />
+      {/* Posts Recomendados */}
+      <Card className="overflow-hidden glass-card border-border/30">
+        <CardHeader className="bg-gradient-to-r from-primary/8 to-primary/3 pb-3 pt-4 px-5 border-b border-border/20">
+          <CardTitle className="text-sm font-headline font-semibold flex items-center">
+            <div className="flex h-6 w-6 items-center justify-center rounded-md bg-primary/10 mr-2">
+              <TrendingUp className="w-3.5 h-3.5 text-primary" />
+            </div>
             Posts Recomendados
           </CardTitle>
         </CardHeader>
-        <CardContent className="p-4 pt-3">
-          <div className="space-y-0.5">
-            {loading ? (
-              <div className="space-y-3 p-1">
-                {[1, 2, 3].map((i) => (
-                  <div key={i} className="flex items-start gap-3">
-                    <Skeleton className="w-12 h-12 rounded-md" />
-                    <div className="space-y-2 flex-1">
-                      <Skeleton className="h-4 w-3/4" />
-                      <Skeleton className="h-3 w-full" />
-                      <Skeleton className="h-3 w-1/2" />
+        <CardContent className="p-0">
+          {loading ? (
+            <div className="p-4 space-y-4">
+              {[1, 2, 3].map((i) => (
+                <div key={i} className="flex gap-3">
+                  <Skeleton className="w-20 h-14 rounded-lg flex-shrink-0" />
+                  <div className="space-y-2 flex-1">
+                    <Skeleton className="h-4 w-full" />
+                    <Skeleton className="h-3 w-2/3" />
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : recommendedPosts.length > 0 ? (
+            <div>
+              {recommendedPosts.map((post, index) => (
+                <Link
+                  href={`/post/${post.slug}`}
+                  key={post.id}
+                  className="group flex gap-3 p-4 hover:bg-primary/5 transition-all duration-200 border-b border-border/10 last:border-b-0"
+                >
+                  {/* Thumbnail */}
+                  <div className="relative w-20 h-14 flex-shrink-0 overflow-hidden rounded-lg border border-border/30">
+                    <Image
+                      src={post.coverImage || "/placeholder-post-image.jpeg"}
+                      alt={post.title}
+                      fill
+                      className="object-cover transition-transform duration-300 group-hover:scale-110"
+                      sizes="80px"
+                    />
+                    {/* Position badge */}
+                    <div className="absolute top-0 left-0 bg-primary/90 text-primary-foreground text-[10px] font-bold w-5 h-5 flex items-center justify-center rounded-br-md">
+                      {index + 1}
                     </div>
                   </div>
-                ))}
-              </div>
-            ) : recommendedPosts.length > 0 ? (
-              <div className="divide-y divide-border/30">
-                {recommendedPosts.map((post) => (
-                  <Link 
-                    href={`/post/${post.slug}`}
-                    key={post.id} 
-                    className="group flex items-start gap-3 p-3 hover:bg-accent/20 rounded-md transition-colors"
-                  >
-                    <div className="relative w-12 h-12 flex-shrink-0 overflow-hidden rounded-md border border-border/40">
-                      <Image
-                        src={post.coverImage || "/placeholder-post-image.jpeg"}
-                        alt={post.title}
-                        fill
-                        className="object-cover transition-transform duration-300 group-hover:scale-110"
-                        sizes="48px"
-                      />
+
+                  {/* Content */}
+                  <div className="flex-1 min-w-0 flex flex-col justify-center">
+                    <h3 className="font-medium text-sm leading-tight text-card-foreground group-hover:text-primary transition-colors line-clamp-2">
+                      {post.title}
+                    </h3>
+                    <div className="flex items-center gap-2 mt-1.5">
+                      <span className="text-[11px] text-muted-foreground/70 truncate">{post.author.name}</span>
+                      {post.likes > 0 && (
+                        <span className="flex items-center gap-0.5 text-[11px] text-muted-foreground/50">
+                          <ThumbsUp className="h-2.5 w-2.5" />
+                          {post.likes}
+                        </span>
+                      )}
                     </div>
-                    
-                    <div className="flex-1 min-w-0">
-                      <h3 className="font-medium text-sm text-card-foreground group-hover:text-primary truncate transition-colors">
-                        {post.title}
-                      </h3>
-                      <p className="text-xs text-muted-foreground line-clamp-1 mt-0.5">
-                        {post.excerpt}
-                      </p>
-                      <div className="flex items-center mt-1 text-xs text-muted-foreground/70">
-                        <span className="font-medium">{post.author.name}</span>
-                        <span className="mx-1.5 inline-block w-1 h-1 rounded-full bg-muted-foreground/30"></span>
-                        <span>{new Date(post.publishDate as string).toLocaleDateString('ES-co')}</span>
-                      </div>
-                    </div>
-                  </Link>
-                ))}
-              </div>
-            ) : (
-              <div className="text-sm text-center py-3 text-muted-foreground/70 border border-dashed border-border/40 rounded-md">
-                No hay posts recomendados disponibles
-              </div>
-            )}
-          </div>
+                  </div>
+
+                  {/* Arrow */}
+                  <ArrowRight className="h-4 w-4 text-muted-foreground/30 self-center flex-shrink-0 transition-all duration-200 group-hover:text-primary group-hover:translate-x-0.5" />
+                </Link>
+              ))}
+            </div>
+          ) : (
+            <div className="text-sm text-center py-6 px-4 text-muted-foreground/70">
+              No hay posts recomendados disponibles
+            </div>
+          )}
         </CardContent>
       </Card>
 
-      {/* Sección de Tags Populares */}
-      <Card className="overflow-hidden border-border/50">
-        <CardHeader className="bg-muted/50 pb-3 pt-4 px-5">
-          <CardTitle className="text-base font-semibold flex items-center">
-            <Hash className="w-4 h-4 mr-2 text-primary" />
+      {/* Tags Populares */}
+      <Card className="overflow-hidden glass-card border-border/30">
+        <CardHeader className="bg-gradient-to-r from-primary/8 to-primary/3 pb-3 pt-4 px-5 border-b border-border/20">
+          <CardTitle className="text-sm font-headline font-semibold flex items-center">
+            <div className="flex h-6 w-6 items-center justify-center rounded-md bg-primary/10 mr-2">
+              <Hash className="w-3.5 h-3.5 text-primary" />
+            </div>
             Tags Populares
           </CardTitle>
         </CardHeader>
-        <CardContent className="p-4 pt-3">
+        <CardContent className="p-4">
           {loadingTags ? (
-            <div className="flex flex-wrap gap-2 p-1">
+            <div className="flex flex-wrap gap-2">
               {[1, 2, 3, 4, 5, 6].map((i) => (
-                <Skeleton key={i} className="h-7 w-16 rounded-full" />
+                <Skeleton key={i} className="h-8 w-20 rounded-full" />
               ))}
             </div>
           ) : popularTags.length > 0 ? (
@@ -173,14 +174,15 @@ export function Sidebar() {
                   href={`/search?tags=${encodeURIComponent(tag.name)}`}
                   className="group"
                 >
-                  <Badge 
-                    variant="outline" 
-                    className="px-3 py-1 bg-accent/10 hover:bg-accent/20 transition-all duration-200"
+                  <Badge
+                    variant="outline"
+                    className="px-3 py-1.5 bg-secondary/30 border-border/30 hover:bg-primary/10 hover:border-primary/40 hover:text-primary transition-all duration-200 cursor-pointer"
                   >
-                    <span className="mr-1.5">
+                    <Hash className="h-3 w-3 mr-1 text-muted-foreground/50 group-hover:text-primary/70" />
+                    <span className="mr-1.5 text-xs">
                       {tag.name}
                     </span>
-                    <span className="inline-flex items-center justify-center bg-primary/10 text-primary text-[10px] font-medium h-4 min-w-4 rounded-full px-1 group-hover:bg-primary/20">
+                    <span className="inline-flex items-center justify-center bg-primary/10 text-primary text-[10px] font-semibold h-4 min-w-5 rounded-full px-1.5 group-hover:bg-primary/20">
                       {tag.count}
                     </span>
                   </Badge>
@@ -188,7 +190,7 @@ export function Sidebar() {
               ))}
             </div>
           ) : (
-            <div className="text-sm text-center py-3 text-muted-foreground/70 border border-dashed border-border/40 rounded-md">
+            <div className="text-sm text-center py-4 text-muted-foreground/70">
               No hay tags populares disponibles
             </div>
           )}
@@ -197,4 +199,3 @@ export function Sidebar() {
     </div>
   )
 }
-

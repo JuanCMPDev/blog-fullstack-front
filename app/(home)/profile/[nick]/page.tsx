@@ -28,6 +28,7 @@ import { es } from "date-fns/locale";
 import { Tag } from "@/components/common/Tag";
 import { AuthorAvatar } from "@/components/common/AuthorAvatar";
 import { getAvatarUrl } from "@/lib/utils";
+import { parseLocation } from "@/lib/countries";
 import { useParams, useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth";
 import { ActivityPagination } from "@/components/profile/ActivityPagination";
@@ -118,7 +119,21 @@ export default function ProfilePage() {
                       <div className="mt-8 flex flex-wrap gap-4">
                         <div className="flex items-center text-muted-foreground">
                           <MapPin className="w-4 h-4 mr-2" />
-                          {profile.location}
+                          {(() => {
+                            const loc = parseLocation(profile.location)
+                            return loc.flagUrl ? (
+                              <span className="flex items-center gap-1.5">
+                                <img
+                                  src={loc.flagUrl}
+                                  alt={loc.name}
+                                  className="h-4 w-5 object-cover rounded-sm"
+                                />
+                                {loc.name}
+                              </span>
+                            ) : (
+                              loc.name
+                            )
+                          })()}
                         </div>
                         <div className="flex items-center text-muted-foreground">
                           <Calendar className="w-4 h-4 mr-2" />
@@ -271,60 +286,90 @@ export default function ProfilePage() {
                         </div>
                       ) : activities.length > 0 ? (
                         <>
-                          <div className="space-y-4">
-                            {activities.map(activity => {
-                              // Crear un ícono según el tipo de actividad
-                              let ActivityIcon;
-                              switch (activity.type) {
-                                case "LIKED":
-                                  ActivityIcon = <Heart className="w-5 h-5 text-red-500" />;
-                                  break;
-                                case "COMMENTED":
-                                  ActivityIcon = <MessageCircle className="w-5 h-5 text-blue-500" />;
-                                  break;
-                                case "SAVED_POST":
-                                  ActivityIcon = <Bookmark className="w-5 h-5 text-amber-500" />;
-                                  break;
-                                case "POST_CREATED":
-                                  ActivityIcon = <Pencil className="w-5 h-5 text-green-500" />;
-                                  break;
-                                default:
-                                  ActivityIcon = <Activity className="w-5 h-5 text-primary" />;
-                              }
-                              
-                              return (
-                                <div key={activity.id} className="flex items-start space-x-4 p-4 bg-secondary/30 rounded-lg">
-                                  <div className="mt-1">{ActivityIcon}</div>
-                                  <div className="flex-1">
-                                    <p className="text-sm">{activity.description}</p>
-                                    <p className="text-xs text-muted-foreground mt-1">
-                                      {new Date(activity.createdAt).toLocaleDateString('es-ES', {
-                                        year: 'numeric',
-                                        month: 'long',
-                                        day: 'numeric',
-                                        hour: '2-digit',
-                                        minute: '2-digit'
-                                      })}
-                                    </p>
+                          {/* Timeline de actividades */}
+                          <div className="relative">
+                            {/* Línea vertical del timeline */}
+                            <div className="absolute left-[17px] sm:left-[19px] top-2 bottom-2 w-px bg-border/50" />
+
+                            <div className="space-y-1">
+                              {activities.map((activity, actIdx) => {
+                                const activityConfig = {
+                                  LIKED: {
+                                    icon: <Heart className="h-3.5 w-3.5" />,
+                                    color: "bg-red-500/10 text-red-500 ring-red-500/20",
+                                    label: "Like",
+                                  },
+                                  COMMENTED: {
+                                    icon: <MessageCircle className="h-3.5 w-3.5" />,
+                                    color: "bg-blue-500/10 text-blue-500 ring-blue-500/20",
+                                    label: "Comentario",
+                                  },
+                                  SAVED_POST: {
+                                    icon: <Bookmark className="h-3.5 w-3.5" />,
+                                    color: "bg-amber-500/10 text-amber-500 ring-amber-500/20",
+                                    label: "Guardado",
+                                  },
+                                  POST_CREATED: {
+                                    icon: <Pencil className="h-3.5 w-3.5" />,
+                                    color: "bg-green-500/10 text-green-500 ring-green-500/20",
+                                    label: "Publicación",
+                                  },
+                                }[activity.type] ?? {
+                                  icon: <Activity className="h-3.5 w-3.5" />,
+                                  color: "bg-primary/10 text-primary ring-primary/20",
+                                  label: "Actividad",
+                                };
+
+                                const dateStr = new Date(activity.createdAt);
+                                const timeStr = dateStr.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
+                                const dayStr = dateStr.toLocaleDateString('es-ES', { day: 'numeric', month: 'short' });
+
+                                return (
+                                  <div
+                                    key={activity.id}
+                                    className="relative flex items-start gap-3 sm:gap-4 py-2.5 px-1 group"
+                                  >
+                                    {/* Timeline dot */}
+                                    <div
+                                      className={`relative z-10 flex-shrink-0 w-[36px] h-[36px] sm:w-[40px] sm:h-[40px] rounded-full flex items-center justify-center ring-2 ring-offset-2 ring-offset-background ${activityConfig.color}`}
+                                    >
+                                      {activityConfig.icon}
+                                    </div>
+
+                                    {/* Content */}
+                                    <div className="flex-1 min-w-0 pt-1">
+                                      <div className="flex flex-col sm:flex-row sm:items-baseline sm:justify-between gap-0.5 sm:gap-2">
+                                        <p className="text-sm leading-snug break-words">
+                                          {activity.description}
+                                        </p>
+                                        <span className="text-[11px] text-muted-foreground/70 whitespace-nowrap shrink-0">
+                                          {dayStr} · {timeStr}
+                                        </span>
+                                      </div>
+                                      <span
+                                        className={`inline-block mt-1.5 text-[10px] font-medium uppercase tracking-wider px-2 py-0.5 rounded-full ${activityConfig.color}`}
+                                      >
+                                        {activityConfig.label}
+                                      </span>
+                                    </div>
                                   </div>
-                                </div>
-                              );
-                            })}
+                                );
+                              })}
+                            </div>
                           </div>
-                          
-                          {/* Componente de paginación */}
-                          <ActivityPagination 
+
+                          {/* Paginación */}
+                          <ActivityPagination
                             currentPage={activitiesPagination.page}
                             totalPages={activitiesPagination.lastPage}
                             totalItems={activitiesPagination.total}
                             onPageChange={handlers.goToActivityPage}
                             disabled={isLoadingActivities}
                           />
-                          
-                          {/* Indicador de carga al cambiar de página */}
+
                           {isLoadingActivities && (
                             <div className="flex justify-center py-4">
-                              <div className="h-6 w-6 animate-spin rounded-full border-2 border-primary border-t-transparent"></div>
+                              <div className="h-5 w-5 animate-spin rounded-full border-2 border-primary border-t-transparent"></div>
                             </div>
                           )}
                         </>
@@ -333,7 +378,7 @@ export default function ProfilePage() {
                           <Activity className="h-12 w-12 text-muted-foreground mb-4" />
                           <h3 className="text-lg font-medium mb-2">No hay actividad reciente</h3>
                           <p className="text-muted-foreground max-w-md">
-                            {profile.nick === user?.nick 
+                            {profile.nick === user?.nick
                               ? "Aún no has realizado ninguna actividad. Comienza interactuando con posts y otros usuarios."
                               : `${profile.name} aún no ha realizado ninguna actividad.`
                             }

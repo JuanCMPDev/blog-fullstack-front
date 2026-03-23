@@ -2,6 +2,10 @@ import { useCallback } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { customFetch } from "@/lib/customFetch";
 import type { Comment } from "@/lib/types";
+import { buildPostCommentsEndpoint } from "@/lib/resource-endpoints";
+import { createLogger } from "@/lib/logger";
+
+const logger = createLogger("useFetchComments")
 
 // Interfaz para datos de comentarios de la API
 interface ApiCommentData {
@@ -9,6 +13,7 @@ interface ApiCommentData {
   content?: string;
   author?: {
     id?: string;
+    nick?: string;
     name?: string;
     avatar?: string;
   };
@@ -23,7 +28,6 @@ interface ApiCommentData {
 
 interface UseFetchCommentsProps {
   postId: number | null;
-  getBaseApiUrl: () => string;
   setComments: React.Dispatch<React.SetStateAction<Comment[]>>;
   setMeta: React.Dispatch<React.SetStateAction<{
     currentPage: number;
@@ -45,7 +49,6 @@ interface UseFetchCommentsProps {
  */
 export function useFetchComments({
   postId, 
-  getBaseApiUrl,
   setComments, 
   setMeta, 
   setHasMore, 
@@ -69,9 +72,10 @@ export function useFetchComments({
       createdAt: comment.createdAt || new Date().toISOString(),
       postId: comment.postId || undefined,
       parentId: comment.parentId,
-      author: comment.author 
+      author: comment.author
         ? {
             id: comment.author.id || 'unknown',
+            nick: comment.author.nick,
             name: comment.author.name || 'Usuario',
             avatar: comment.author.avatar || ''
           }
@@ -105,17 +109,18 @@ export function useFetchComments({
     setIsLoading(true);
     
     try {
-      const apiUrl = getBaseApiUrl();
-      
       // Usar el valor de orden pasado directamente o el del estado
       const currentOrder = orderValue || order;
       
       // El backend espera directamente los valores: newest, oldest, likes_desc, likes_asc
-      console.log(`[DEBUG] Ejecutando fetchComments con orden: ${currentOrder}`);
       
       // Usar el endpoint que devuelve la estructura completa de comentarios anidados
-      const endpoint = `${apiUrl}/comments/post/${postId}/nested?page=${pageNum}&limit=${limit}&order=${currentOrder}`;
-      console.log(`[DEBUG] Cargando comentarios desde: ${endpoint}`);
+      const endpoint = buildPostCommentsEndpoint(postId, {
+        page: pageNum,
+        limit,
+        order: currentOrder,
+      });
+      logger.debug(`Cargando comentarios desde: ${endpoint}`)
       
       const response = await customFetch(endpoint);
       
@@ -136,7 +141,6 @@ export function useFetchComments({
       
       // Si no hay comentarios, establecer array vacío y terminar
       if (commentsData.length === 0) {
-        console.log('[DEBUG] No se encontraron comentarios en la respuesta');
         if (resetList) {
           setComments([]);
         }
@@ -147,7 +151,7 @@ export function useFetchComments({
         return;
       }
       
-      console.log(`[DEBUG] Se encontraron ${commentsData.length} comentarios principales con sus respuestas anidadas`);
+      logger.debug(`Se encontraron ${commentsData.length} comentarios principales con sus respuestas anidadas`)
       
       // Procesar cada comentario principal y sus respuestas
       const structuredComments = commentsData.map(ensureNestedStructure);
@@ -164,7 +168,7 @@ export function useFetchComments({
       };
       
       countReplies(structuredComments);
-      console.log(`[DEBUG] Total de respuestas cargadas en todos los niveles: ${totalRepliesCount}`);
+      logger.debug(`Total de respuestas cargadas en todos los niveles: ${totalRepliesCount}`)
 
       // Actualizar el estado con los comentarios cargados
       if (resetList || pageNum === 1) {
@@ -179,7 +183,7 @@ export function useFetchComments({
       setPage(metaData.currentPage);
       
     } catch (error) {
-      console.error('Error al obtener comentarios:', error);
+      logger.error('Error al obtener comentarios', error)
       toast({
         title: "Error",
         description: "No se pudieron cargar los comentarios. Intente nuevamente.",
@@ -192,7 +196,7 @@ export function useFetchComments({
       // Garantizar que el estado de carga termine siempre
       setIsLoading(false);
     }
-  }, [postId, getBaseApiUrl, toast, isLoading, page, limit, order, setComments, setMeta, setHasMore, setPage, setIsLoading, ensureNestedStructure]);
+  }, [postId, toast, isLoading, page, limit, order, setComments, setMeta, setHasMore, setPage, setIsLoading, ensureNestedStructure]);
 
   return {
     fetchComments

@@ -1,172 +1,205 @@
 "use client"
 
+import { useState, useEffect, useRef } from "react"
+import Link from "next/link"
 import { motion } from "framer-motion"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card"
-import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Button } from "@/components/ui/button"
 import {
   Shield,
-  Sparkles,
-  Lock,
-  FileText,
+  ArrowLeft,
   Info,
   Database,
+  FileText,
   Share2,
   UserCheck,
   ShieldCheck,
   RefreshCw,
   MessageSquare,
-  ChevronLeft,
+  ArrowUp,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
-import { useState } from "react"
-import Link from "next/link"
 
-const staggerContainer = {
-  animate: {
-    transition: {
-      staggerChildren: 0.1,
-    },
-  },
+interface Section {
+  id: string
+  title: string
+  shortTitle: string
+  icon: React.ReactNode
+  content: React.ReactNode
 }
 
-const fadeInUp = {
-  initial: { opacity: 0, y: 20 },
-  animate: { opacity: 1, y: 0, transition: { duration: 0.6 } },
-}
-
-const sections = [
+const sections: Section[] = [
   {
-    id: "introduction",
+    id: "introduccion",
     title: "1. Introducción",
-    icon: <Info className="h-5 w-5" />,
+    shortTitle: "Introducción",
+    icon: <Info className="h-4 w-4" />,
     content: (
       <>
         <p className="mb-4">
           En Techno Espacio, nos comprometemos a proteger la privacidad de nuestros usuarios. Esta Política de
-          Privacidad describe cómo recopilamos, usamos, procesamos y compartimos tu información personal cuando utilizas
-          nuestro sitio web y servicios.
+          Privacidad describe cómo recopilamos, usamos, procesamos y compartimos tu información personal cuando
+          utilizas nuestro sitio web y servicios.
         </p>
         <p>
           Al utilizar Techno Espacio, aceptas las prácticas descritas en esta Política de Privacidad. Te recomendamos
-          leer este documento detenidamente para comprender nuestras políticas y prácticas con respecto a tu información
-          personal.
+          leer este documento detenidamente para comprender nuestras políticas y prácticas con respecto a tu
+          información personal.
         </p>
       </>
     ),
   },
   {
-    id: "data-collection",
+    id: "recopilacion",
     title: "2. Información que recopilamos",
-    icon: <Database className="h-5 w-5" />,
+    shortTitle: "Recopilación",
+    icon: <Database className="h-4 w-4" />,
     content: (
       <>
         <p className="mb-4">Podemos recopilar los siguientes tipos de información:</p>
-        <ul className="list-disc pl-6 space-y-2">
-          <li>
-            <strong>Información personal identificable:</strong> Nombre, dirección de correo electrónico, nombre de
-            usuario y fotografía de perfil cuando te registras en nuestra plataforma.
+        <ul className="space-y-3">
+          <li className="flex gap-3">
+            <span className="inline-block w-1.5 h-1.5 rounded-full bg-primary mt-2 shrink-0" />
+            <span>
+              <strong className="text-foreground">Información personal identificable:</strong> Nombre, dirección de
+              correo electrónico, nombre de usuario y fotografía de perfil cuando te registras en nuestra plataforma.
+            </span>
           </li>
-          <li>
-            <strong>Información de uso:</strong> Datos sobre cómo interactúas con nuestro sitio, incluyendo las páginas
-            que visitas, el tiempo que pasas en ellas y las funciones que utilizas.
+          <li className="flex gap-3">
+            <span className="inline-block w-1.5 h-1.5 rounded-full bg-primary mt-2 shrink-0" />
+            <span>
+              <strong className="text-foreground">Información de uso:</strong> Datos sobre cómo interactúas con
+              nuestro sitio, incluyendo las páginas que visitas, el tiempo que pasas en ellas y las funciones que
+              utilizas.
+            </span>
           </li>
-          <li>
-            <strong>Información técnica:</strong> Dirección IP, tipo de navegador, proveedor de servicios de Internet,
-            identificadores de dispositivos, sistema operativo y otra información técnica.
+          <li className="flex gap-3">
+            <span className="inline-block w-1.5 h-1.5 rounded-full bg-primary mt-2 shrink-0" />
+            <span>
+              <strong className="text-foreground">Información técnica:</strong> Dirección IP, tipo de navegador,
+              proveedor de servicios de Internet, identificadores de dispositivos y sistema operativo.
+            </span>
           </li>
-          <li>
-            <strong>Cookies y tecnologías similares:</strong> Utilizamos cookies y tecnologías similares para recopilar
-            información sobre tu actividad, navegador y dispositivo.
+          <li className="flex gap-3">
+            <span className="inline-block w-1.5 h-1.5 rounded-full bg-primary mt-2 shrink-0" />
+            <span>
+              <strong className="text-foreground">Cookies y tecnologías similares:</strong> Utilizamos cookies y
+              tecnologías similares para recopilar información sobre tu actividad, navegador y dispositivo.
+            </span>
           </li>
         </ul>
       </>
     ),
   },
   {
-    id: "data-usage",
+    id: "uso",
     title: "3. Cómo utilizamos tu información",
-    icon: <FileText className="h-5 w-5" />,
+    shortTitle: "Uso de datos",
+    icon: <FileText className="h-4 w-4" />,
     content: (
       <>
         <p className="mb-4">Utilizamos la información que recopilamos para:</p>
-        <ul className="list-disc pl-6 space-y-2">
-          <li>Proporcionar, mantener y mejorar nuestros servicios</li>
-          <li>Procesar y completar transacciones</li>
-          <li>Enviar información técnica, actualizaciones, alertas de seguridad y mensajes de soporte</li>
-          <li>Responder a tus comentarios, preguntas y solicitudes</li>
-          <li>Desarrollar nuevos productos y servicios</li>
-          <li>Personalizar tu experiencia</li>
-          <li>Proteger contra actividades fraudulentas y abusos</li>
-          <li>Cumplir con obligaciones legales</li>
+        <ul className="space-y-2">
+          {[
+            "Proporcionar, mantener y mejorar nuestros servicios",
+            "Procesar y completar transacciones",
+            "Enviar información técnica, actualizaciones, alertas de seguridad y mensajes de soporte",
+            "Responder a tus comentarios, preguntas y solicitudes",
+            "Desarrollar nuevos productos y servicios",
+            "Personalizar tu experiencia",
+            "Proteger contra actividades fraudulentas y abusos",
+            "Cumplir con obligaciones legales",
+          ].map((item, i) => (
+            <li key={i} className="flex gap-3">
+              <span className="inline-block w-1.5 h-1.5 rounded-full bg-primary mt-2 shrink-0" />
+              <span>{item}</span>
+            </li>
+          ))}
         </ul>
       </>
     ),
   },
   {
-    id: "data-sharing",
+    id: "compartir",
     title: "4. Compartir tu información",
-    icon: <Share2 className="h-5 w-5" />,
+    shortTitle: "Compartir datos",
+    icon: <Share2 className="h-4 w-4" />,
     content: (
       <>
         <p className="mb-4">
           No vendemos tu información personal a terceros. Sin embargo, podemos compartir tu información en las
           siguientes circunstancias:
         </p>
-        <ul className="list-disc pl-6 space-y-2">
-          <li>Con proveedores de servicios que nos ayudan a operar nuestro sitio</li>
-          <li>Con tu consentimiento o según tus instrucciones</li>
-          <li>Para cumplir con leyes, regulaciones o procesos legales</li>
-          <li>En relación con una fusión, venta de activos o transacción financiera</li>
-          <li>Para proteger los derechos, propiedad o seguridad de Techno Espacio y nuestros usuarios</li>
+        <ul className="space-y-2">
+          {[
+            "Con proveedores de servicios que nos ayudan a operar nuestro sitio",
+            "Con tu consentimiento o según tus instrucciones",
+            "Para cumplir con leyes, regulaciones o procesos legales",
+            "En relación con una fusión, venta de activos o transacción financiera",
+            "Para proteger los derechos, propiedad o seguridad de Techno Espacio y nuestros usuarios",
+          ].map((item, i) => (
+            <li key={i} className="flex gap-3">
+              <span className="inline-block w-1.5 h-1.5 rounded-full bg-primary mt-2 shrink-0" />
+              <span>{item}</span>
+            </li>
+          ))}
         </ul>
       </>
     ),
   },
   {
-    id: "your-rights",
+    id: "derechos",
     title: "5. Tus derechos y opciones",
-    icon: <UserCheck className="h-5 w-5" />,
+    shortTitle: "Tus derechos",
+    icon: <UserCheck className="h-4 w-4" />,
     content: (
       <>
         <p className="mb-4">
-          Dependiendo de tu ubicación, puedes tener ciertos derechos con respecto a tu información personal, incluyendo:
+          Dependiendo de tu ubicación, puedes tener ciertos derechos con respecto a tu información personal,
+          incluyendo:
         </p>
-        <ul className="list-disc pl-6 space-y-2">
-          <li>Acceder a tu información personal</li>
-          <li>Corregir datos inexactos</li>
-          <li>Eliminar tu información</li>
-          <li>Oponerte al procesamiento de tus datos</li>
-          <li>Exportar tus datos en un formato portátil</li>
-          <li>Retirar tu consentimiento en cualquier momento</li>
+        <ul className="space-y-2">
+          {[
+            "Acceder a tu información personal",
+            "Corregir datos inexactos",
+            "Eliminar tu información",
+            "Oponerte al procesamiento de tus datos",
+            "Exportar tus datos en un formato portátil",
+            "Retirar tu consentimiento en cualquier momento",
+          ].map((item, i) => (
+            <li key={i} className="flex gap-3">
+              <span className="inline-block w-1.5 h-1.5 rounded-full bg-primary mt-2 shrink-0" />
+              <span>{item}</span>
+            </li>
+          ))}
         </ul>
         <p className="mt-4">
           Para ejercer estos derechos, contáctanos a través de nuestra{" "}
-          <a href="/contact" className="text-primary hover:underline">
+          <Link href="/contact" className="text-primary hover:underline font-medium">
             página de contacto
-          </a>
+          </Link>
           .
         </p>
       </>
     ),
   },
   {
-    id: "security",
+    id: "seguridad",
     title: "6. Seguridad de la información",
-    icon: <ShieldCheck className="h-5 w-5" />,
+    shortTitle: "Seguridad",
+    icon: <ShieldCheck className="h-4 w-4" />,
     content: (
       <p>
-        Implementamos medidas de seguridad diseñadas para proteger tu información personal contra acceso no autorizado,
-        uso o divulgación. Sin embargo, ningún sistema es completamente seguro, y no podemos garantizar la seguridad
-        absoluta de tu información.
+        Implementamos medidas de seguridad diseñadas para proteger tu información personal contra acceso no
+        autorizado, uso o divulgación. Sin embargo, ningún sistema es completamente seguro, y no podemos garantizar
+        la seguridad absoluta de tu información.
       </p>
     ),
   },
   {
-    id: "changes",
+    id: "cambios",
     title: "7. Cambios a esta política",
-    icon: <RefreshCw className="h-5 w-5" />,
+    shortTitle: "Cambios",
+    icon: <RefreshCw className="h-4 w-4" />,
     content: (
       <p>
         Podemos actualizar esta Política de Privacidad periódicamente. Te notificaremos sobre cambios significativos
@@ -176,16 +209,17 @@ const sections = [
     ),
   },
   {
-    id: "contact",
+    id: "contacto",
     title: "8. Contacto",
-    icon: <MessageSquare className="h-5 w-5" />,
+    shortTitle: "Contacto",
+    icon: <MessageSquare className="h-4 w-4" />,
     content: (
       <p>
-        Si tienes preguntas o inquietudes sobre esta Política de Privacidad o nuestras prácticas de datos, contáctanos a
-        través de nuestra{" "}
-        <a href="/contact" className="text-primary hover:underline">
+        Si tienes preguntas o inquietudes sobre esta Política de Privacidad o nuestras prácticas de datos,
+        contáctanos a través de nuestra{" "}
+        <Link href="/contact" className="text-primary hover:underline font-medium">
           página de contacto
-        </a>
+        </Link>
         .
       </p>
     ),
@@ -193,163 +227,165 @@ const sections = [
 ]
 
 export default function PrivacyPolicyPage() {
-  const [viewMode, setViewMode] = useState<"full" | "accordion" | "tabs">("full")
+  const [activeSection, setActiveSection] = useState(sections[0].id)
+  const [showScrollTop, setShowScrollTop] = useState(false)
+  const sectionRefs = useRef<Record<string, HTMLElement | null>>({})
+
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      (entries) => {
+        for (const entry of entries) {
+          if (entry.isIntersecting) {
+            setActiveSection(entry.target.id)
+          }
+        }
+      },
+      { rootMargin: "-20% 0px -60% 0px" }
+    )
+
+    for (const section of sections) {
+      const el = sectionRefs.current[section.id]
+      if (el) observer.observe(el)
+    }
+
+    return () => observer.disconnect()
+  }, [])
+
+  useEffect(() => {
+    const handleScroll = () => setShowScrollTop(window.scrollY > 400)
+    window.addEventListener("scroll", handleScroll, { passive: true })
+    return () => window.removeEventListener("scroll", handleScroll)
+  }, [])
+
+  const scrollToSection = (id: string) => {
+    sectionRefs.current[id]?.scrollIntoView({ behavior: "smooth", block: "start" })
+  }
 
   return (
-    <div className="min-h-screen bg-background relative overflow-hidden">
-      {/* Background pattern */}
-      <div className="absolute inset-0 bg-grid-pattern opacity-[0.03] pointer-events-none" />
+    <div className="min-h-screen bg-dot-pattern">
+      {/* Hero */}
+      <div className="relative overflow-hidden border-b border-border/40">
+        <div className="absolute inset-0 bg-gradient-to-b from-primary/5 via-transparent to-transparent" />
+        <div className="container mx-auto px-4 pt-16 pb-12 relative z-10">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5 }}
+          >
+            <Link
+              href="/"
+              className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-primary transition-colors mb-8"
+            >
+              <ArrowLeft className="h-4 w-4" />
+              Volver al inicio
+            </Link>
 
-      {/* Decorative elements */}
-      <div className="absolute top-20 left-10 w-64 h-64 bg-primary/10 rounded-full blur-3xl opacity-70 animate-blob" />
-      <div className="absolute bottom-20 right-10 w-80 h-80 bg-secondary/10 rounded-full blur-3xl opacity-70 animate-blob animation-delay-2000" />
-
-      <div className="container mx-auto px-4 py-16 relative z-10">
-        <motion.div
-          className="text-center mb-12"
-          initial={{ opacity: 0, y: -50 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.8, delay: 0.2 }}
-        >
-          <div className="inline-flex items-center justify-center mb-4">
-            <div className="relative">
-              <div className="absolute inset-0 rounded-full bg-primary/20 blur-md transform scale-110" />
-              <div className="relative bg-card p-3 rounded-full shadow-lg">
-                <Shield className="h-10 w-10 text-primary" />
+            <div className="flex items-center gap-4 mb-4">
+              <div className="flex items-center justify-center w-12 h-12 rounded-xl bg-primary/10 ring-1 ring-primary/20">
+                <Shield className="h-6 w-6 text-primary" />
+              </div>
+              <div>
+                <h1 className="text-3xl md:text-4xl font-bold tracking-tight">
+                  Política de Privacidad
+                </h1>
+                <p className="text-muted-foreground mt-1">
+                  Cómo protegemos y manejamos tus datos personales
+                </p>
               </div>
             </div>
-          </div>
 
-          <h1 className="text-5xl md:text-7xl font-extrabold text-foreground mb-4 tracking-tight">
-            Política de Privacidad
-          </h1>
-
-          <div className="relative inline-block mt-2 mb-6">
-            <Sparkles className="absolute -top-4 -left-6 h-6 w-6 text-primary animate-pulse" />
-            <p className="text-xl md:text-2xl text-muted-foreground">Protección y manejo de tus datos</p>
-            <Sparkles className="absolute -bottom-4 -right-6 h-6 w-6 text-primary animate-pulse" />
-          </div>
-
-          <div className="flex flex-wrap justify-center gap-2 mb-8">
-            <Button variant={viewMode === "full" ? "default" : "outline"} size="sm" onClick={() => setViewMode("full")}>
-              Vista completa
-            </Button>
-            <Button
-              variant={viewMode === "accordion" ? "default" : "outline"}
-              size="sm"
-              onClick={() => setViewMode("accordion")}
-            >
-              Acordeón
-            </Button>
-            <Button variant={viewMode === "tabs" ? "default" : "outline"} size="sm" onClick={() => setViewMode("tabs")}>
-              Pestañas
-            </Button>
-          </div>
-        </motion.div>
-
-        <motion.div className="max-w-4xl mx-auto" variants={staggerContainer} initial="initial" animate="animate">
-          <Card className="shadow-lg border border-border/40 backdrop-blur-sm bg-card/95 overflow-hidden">
-            <CardHeader className="bg-muted/30 border-b border-border/40">
-              <CardTitle className="text-2xl font-bold flex items-center gap-2">
-                <Lock className="h-6 w-6 text-primary" />
-                Política de Privacidad de Techno Espacio
-              </CardTitle>
-              <CardDescription>
-                Última actualización:{" "}
-                {new Date().toLocaleDateString("es-ES", { day: "numeric", month: "long", year: "numeric" })}
-              </CardDescription>
-            </CardHeader>
-
-            <CardContent className="pt-8 px-4 md:px-6">
-              {viewMode === "full" && (
-                <div className="space-y-8">
-                  {sections.map((section, index) => (
-                    <motion.section
-                      key={section.id}
-                      variants={fadeInUp}
-                      className={cn(
-                        "pb-8", // Increased padding
-                        index < sections.length - 1 && "border-b border-border/40",
-                      )}
-                    >
-                      <h2 className="text-lg md:text-xl font-semibold mb-4 flex items-center gap-2 text-foreground">
-                        {section.icon}
-                        {section.title}
-                      </h2>
-                      <div className="text-sm md:text-base text-muted-foreground leading-relaxed">
-                        {" "}
-                        {/* Added responsive text size and line height */}
-                        {section.content}
-                      </div>
-                    </motion.section>
-                  ))}
-                </div>
-              )}
-
-              {viewMode === "accordion" && (
-                <Accordion type="single" collapsible className="w-full">
-                  {sections.map((section) => (
-                    <AccordionItem key={section.id} value={section.id}>
-                      <AccordionTrigger className="flex items-center gap-2 text-base md:text-lg py-5">
-                        {" "}
-                        {/* Increased font size and padding */}
-                        {section.icon}
-                        <span>{section.title}</span>
-                      </AccordionTrigger>
-                      <AccordionContent className="text-sm md:text-base text-muted-foreground leading-relaxed pb-6">
-                        {" "}
-                        {/* Added responsive text size, line height and padding */}
-                        {section.content}
-                      </AccordionContent>
-                    </AccordionItem>
-                  ))}
-                </Accordion>
-              )}
-
-              {viewMode === "tabs" && (
-                <Tabs defaultValue={sections[0].id} className="w-full">
-                  <TabsList className="grid grid-cols-4 md:grid-cols-8 mb-6">
-                    {sections.map((section, index) => (
-                      <TabsTrigger
-                        key={section.id}
-                        value={section.id}
-                        className="flex flex-col items-center gap-1 p-2 h-auto"
-                        title={section.title}
-                      >
-                        {section.icon}
-                        <span className="hidden md:inline text-xs">{index + 1}</span>
-                      </TabsTrigger>
-                    ))}
-                  </TabsList>
-                  {sections.map((section) => (
-                    <TabsContent
-                      key={section.id}
-                      value={section.id}
-                      className="text-sm md:text-base text-muted-foreground leading-relaxed"
-                    >
-                      {" "}
-                      {/* Added responsive text size and line height */}
-                      <h3 className="text-lg md:text-xl font-semibold mb-4 text-foreground">{section.title}</h3>
-                      {section.content}
-                    </TabsContent>
-                  ))}
-                </Tabs>
-              )}
-            </CardContent>
-
-            <CardFooter className="flex flex-col sm:flex-row justify-between items-center gap-4 bg-muted/20 border-t border-border/40 py-4">
-            <Button variant="outline" size="sm" className="w-full sm:w-auto">
-                <ChevronLeft className="mr-2 h-4 w-4" />
-                <Link href="/">Volver</Link>
-              </Button>
-              <p className="text-sm text-muted-foreground text-center">
-                Esta política está redactada en cumplimiento con las regulaciones de protección de datos aplicables.
-              </p>
-            </CardFooter>
-          </Card>
-        </motion.div>
+            <p className="text-xs text-muted-foreground/70 mt-4">
+              Última actualización: 1 de enero de 2025
+            </p>
+          </motion.div>
+        </div>
       </div>
+
+      {/* Content with TOC sidebar */}
+      <div className="container mx-auto px-4 py-10">
+        <div className="flex gap-10 max-w-5xl mx-auto">
+          {/* TOC Sidebar - sticky on desktop */}
+          <aside className="hidden lg:block w-56 shrink-0">
+            <nav className="sticky top-24 space-y-0.5">
+              <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground/60 mb-3 px-2">
+                Contenido
+              </p>
+              {sections.map((section) => (
+                <button
+                  key={section.id}
+                  onClick={() => scrollToSection(section.id)}
+                  className={cn(
+                    "flex items-center gap-2 w-full text-left px-2.5 py-1.5 rounded-md text-sm transition-colors",
+                    activeSection === section.id
+                      ? "bg-primary/10 text-primary font-medium"
+                      : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
+                  )}
+                >
+                  {section.icon}
+                  <span className="truncate">{section.shortTitle}</span>
+                </button>
+              ))}
+            </nav>
+          </aside>
+
+          {/* Main content */}
+          <main className="flex-1 min-w-0 max-w-3xl">
+            <div className="space-y-0">
+              {sections.map((section, index) => (
+                <motion.section
+                  key={section.id}
+                  id={section.id}
+                  ref={(el) => { sectionRefs.current[section.id] = el }}
+                  initial={{ opacity: 0, y: 16 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  viewport={{ once: true, margin: "-50px" }}
+                  transition={{ duration: 0.4, delay: index * 0.03 }}
+                  className={cn(
+                    "scroll-mt-24 py-8",
+                    index < sections.length - 1 && "border-b border-border/30"
+                  )}
+                >
+                  <h2 className="text-lg font-semibold mb-4 flex items-center gap-2.5 text-foreground">
+                    <span className="flex items-center justify-center w-7 h-7 rounded-lg bg-primary/10 text-primary shrink-0">
+                      {section.icon}
+                    </span>
+                    {section.title}
+                  </h2>
+                  <div className="text-[15px] text-muted-foreground leading-relaxed pl-[38px]">
+                    {section.content}
+                  </div>
+                </motion.section>
+              ))}
+            </div>
+
+            {/* Related links */}
+            <div className="mt-12 flex flex-col sm:flex-row gap-3">
+              <Button asChild variant="outline" size="sm" className="flex-1">
+                <Link href="/terminos">Términos de Uso</Link>
+              </Button>
+              <Button asChild variant="outline" size="sm" className="flex-1">
+                <Link href="/faq">Preguntas Frecuentes</Link>
+              </Button>
+              <Button asChild variant="outline" size="sm" className="flex-1">
+                <Link href="/contact">Contacto</Link>
+              </Button>
+            </div>
+          </main>
+        </div>
+      </div>
+
+      {/* Scroll to top */}
+      {showScrollTop && (
+        <motion.button
+          initial={{ opacity: 0, scale: 0.8 }}
+          animate={{ opacity: 1, scale: 1 }}
+          exit={{ opacity: 0, scale: 0.8 }}
+          onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
+          className="fixed bottom-6 right-6 z-50 w-10 h-10 rounded-full bg-primary text-primary-foreground shadow-lg flex items-center justify-center hover:bg-primary/90 transition-colors"
+        >
+          <ArrowUp className="h-4 w-4" />
+        </motion.button>
+      )}
     </div>
   )
 }
-

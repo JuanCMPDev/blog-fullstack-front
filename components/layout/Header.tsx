@@ -11,12 +11,9 @@ import { MobileMenu } from "@/components/layout/MobileMenu";
 import { UserMenu } from "@/components/auth/UserMenu";
 import { motion } from "framer-motion";
 import { useAuth } from "@/lib/auth";
-import { useSettings } from "@/hooks/use-settings";
-import { ThemePreference } from "@/lib/types";
 
 export function Header() {
   const { theme, setTheme } = useTheme();
-  const { settings, updateSettings } = useSettings();
   const [mounted, setMounted] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
@@ -34,12 +31,8 @@ export function Header() {
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
-  // Función para cambiar el tema sincrónicamente con las configuraciones
   const toggleTheme = () => {
-    const newTheme = theme === "light" ? "dark" : "light";
-    setTheme(newTheme);
-    // Sincronizar con settings
-    updateSettings("themePreference", newTheme as ThemePreference);
+    setTheme(theme === "light" ? "dark" : "light");
   };
 
   const isActive = (path: string) => pathname === path;
@@ -68,10 +61,10 @@ export function Header() {
       initial={{ opacity: 0, y: -20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.5 }}
-      className={`sticky top-0 z-50 w-full transition-all duration-200 ${
+      className={`sticky top-0 z-50 w-full transition-all duration-300 border-b ${
         scrolled
-          ? "bg-background/80 backdrop-blur-sm shadow-md"
-          : "bg-background"
+          ? "bg-background/80 backdrop-blur-md shadow-lg border-border/50"
+          : "bg-background/95 backdrop-blur-sm border-transparent"
       }`}
     >
       <div className="container mx-auto px-4">
@@ -83,16 +76,17 @@ export function Header() {
             >
               <Code className="h-8 w-8 text-primary" />
             </motion.div>
-            <span className="text-2xl font-bold text-foreground">
+            <span className="text-2xl font-headline font-bold text-foreground">
               Techno<span className="text-primary">Espacio</span>
             </span>
           </Link>
 
           <nav className="hidden md:flex items-center space-x-6">
-            {["Inicio", "Ejercicios", "Contacto"].map((item) => {
+            {["Inicio", "Cursos", "Proyectos", "Contacto"].map((item) => {
               const routeMap = {
                 Inicio: "/",
-                Ejercicios: "/exercises",
+                Proyectos: "/projects",
+                Cursos: "/courses",
                 Contacto: "/contact",
               };
               const route = routeMap[item as keyof typeof routeMap];
@@ -115,11 +109,11 @@ export function Header() {
               <Input
                 type="search"
                 placeholder="Buscar..."
-                className="w-[200px] pl-8"
+                className="w-[200px] pl-8 bg-secondary/50 border-border/30 focus:border-primary/50 rounded-lg"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
               />
-              <Search className="absolute left-2 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Search className="absolute left-2.5 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             </form>
 
             <Button
@@ -158,7 +152,7 @@ export function Header() {
               </div>
             )}
 
-            <MobileMenu theme={theme} setTheme={setTheme} user={user} settings={settings} updateSettings={updateSettings} />
+            <MobileMenu theme={theme} setTheme={setTheme} user={user} />
           </div>
         </div>
       </div>

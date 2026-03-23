@@ -2,6 +2,7 @@ import { useState, useCallback, useEffect } from "react";
 import { customFetch } from "@/lib/customFetch";
 import { useAuth } from "@/lib/auth";
 import { useToast } from "./use-toast";
+import { buildApiUrl } from "@/lib/api";
 
 export interface Activity {
   id: number;
@@ -45,25 +46,24 @@ export function useActivities(nick?: string) {
     setError(null);
     
     try {
-      // Asegurarse de que la URL no tenga barras duplicadas
-      let apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
-      // Eliminar la barra final si existe
-      if (apiUrl.endsWith('/')) {
-        apiUrl = apiUrl.slice(0, -1);
-      }
-      
       // Determinar si es el perfil del usuario actual o de otro usuario
       const isCurrentUser = auth.user && (!nick || nick === auth.user.nick);
       
       // Construir la URL dependiendo de si es el usuario actual u otro
-      let endpoint = '';
+      let endpointPath = '';
       if (isCurrentUser) {
-        endpoint = `${apiUrl}/profile/me/activities?page=${page}&limit=${limit}`;
+        endpointPath = `profile/me/activities`;
       } else if (nick) {
-        endpoint = `${apiUrl}/profile/${nick}/activities?page=${page}&limit=${limit}`;
+        endpointPath = `profile/${nick}/activities`;
       } else {
         throw new Error("Se necesita un nick para cargar actividades de otro usuario");
       }
+
+      const params = new URLSearchParams({
+        page: String(page),
+        limit: String(limit),
+      });
+      const endpoint = buildApiUrl(`${endpointPath}?${params.toString()}`);
       
       // Preparar headers de autenticación si es necesario
       const headers: HeadersInit = {};

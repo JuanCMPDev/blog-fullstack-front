@@ -1,20 +1,11 @@
 import { useCallback } from "react";
 import type { Comment } from "@/lib/types";
+import { buildApiUrl } from "@/lib/api";
 
 /**
  * Hook para utilidades comunes de comentarios
  */
 export function useCommentUtils() {
-  // Función para obtener la URL base de la API
-  const getBaseApiUrl = useCallback(() => {
-    let apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
-    // Eliminar la barra final si existe
-    if (apiUrl.endsWith('/')) {
-      apiUrl = apiUrl.slice(0, -1);
-    }
-    return apiUrl;
-  }, []);
-
   // Función auxiliar para actualizar un comentario recursivamente
   const updateCommentRecursively = useCallback((comments: Comment[], commentId: string, updateFn: (comment: Comment) => Comment): Comment[] => {
     return comments.map(comment => {
@@ -45,7 +36,7 @@ export function useCommentUtils() {
   }, []);
   
   return {
-    getBaseApiUrl,
+    buildApiUrl,
     updateCommentRecursively,
     removeCommentRecursively
   };

@@ -2,6 +2,10 @@ import { useState, useEffect, useCallback } from "react"
 import { Post, PostStatus } from "@/lib/types"
 import { customFetch } from "@/lib/customFetch"
 import { toast } from "@/hooks/use-toast"
+import { buildApiUrl } from "@/lib/api"
+import { createLogger } from "@/lib/logger"
+
+const logger = createLogger("usePosts")
 
 // Interfaces y tipos para usePost
 interface UsePostProps {
@@ -53,15 +57,6 @@ interface UsePostsReturn {
   refetch: () => Promise<void>
 }
 
-// Función auxiliar para obtener la URL base de la API
-const getBaseUrl = () => {
-  let apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'
-  if (apiUrl.endsWith('/')) {
-    apiUrl = apiUrl.slice(0, -1)
-  }
-  return apiUrl
-}
-
 // Hook para trabajar con un post individual
 export function usePost({ postId }: UsePostProps = {}): UsePostReturn {
   const [post, setPost] = useState<Post | null>(null)
@@ -79,8 +74,7 @@ export function usePost({ postId }: UsePostProps = {}): UsePostReturn {
     setError(null)
     
     try {
-      const apiUrl = getBaseUrl()
-      const response = await customFetch(`${apiUrl}/posts/${postId}`)
+      const response = await customFetch(buildApiUrl(`posts/${postId}`))
       
       if (!response.ok) {
         throw new Error(`Error al cargar el post: ${response.statusText}`)
@@ -111,8 +105,6 @@ export function usePost({ postId }: UsePostProps = {}): UsePostReturn {
     setError(null)
     
     try {
-      const apiUrl = getBaseUrl()
-      
       // Determinar si necesitamos subir una nueva imagen
       let imageUrl: string | null = post.coverImage
       
@@ -125,12 +117,14 @@ export function usePost({ postId }: UsePostProps = {}): UsePostReturn {
         imageUrl = null
       } else if (newImage instanceof File) {
         // El usuario quiere cambiar la imagen, subimos la nueva
-        console.log("Subiendo nueva imagen:", newImage.name)
+        logger.debug("Subiendo nueva imagen", { imageName: newImage.name })
         
         const formData = new FormData()
+        formData.append('resource', 'post-image')
+        formData.append('file', newImage)
         formData.append('image', newImage)
         
-        const uploadResponse = await customFetch(`${apiUrl}/posts/upload`, {
+        const uploadResponse = await customFetch(buildApiUrl("posts/upload"), {
           method: 'POST',
           body: formData
         })
@@ -149,9 +143,9 @@ export function usePost({ postId }: UsePostProps = {}): UsePostReturn {
         coverImage: imageUrl
       }
       
-      console.log("Actualizando post con datos:", postData)
+      logger.debug("Actualizando post", { postId, hasCoverImage: Boolean(imageUrl) })
       
-      const updateResponse = await customFetch(`${apiUrl}/posts/${postId}`, {
+      const updateResponse = await customFetch(buildApiUrl(`posts/${postId}`), {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json'
@@ -233,7 +227,6 @@ export function usePosts({ initialLimit = 10 }: UsePostsProps = {}): UsePostsRet
     setError(null)
     
     try {
-      const apiUrl = getBaseUrl()
       let endpoint = "";
       
       // Si hay un término de búsqueda activo, usamos el endpoint admin/search
@@ -253,7 +246,7 @@ export function usePosts({ initialLimit = 10 }: UsePostsProps = {}): UsePostsRet
         }
         
         // Construir la URL con los parámetros de búsqueda
-        endpoint = `${apiUrl}/posts/admin/search?page=${currentPage}&limit=${limit}&searchTerm=${encodeURIComponent(activeSearchTerm)}`;
+        endpoint = buildApiUrl(`posts/admin/search?page=${currentPage}&limit=${limit}&searchTerm=${encodeURIComponent(activeSearchTerm)}`);
         
         // Sólo añadir el filtro de estado si hay uno seleccionado
         if (status) {
@@ -263,16 +256,16 @@ export function usePosts({ initialLimit = 10 }: UsePostsProps = {}): UsePostsRet
         // Si no hay término de búsqueda, usar los endpoints normales filtrados por estado
         switch(filter) {
           case 'published':
-            endpoint = `${apiUrl}/posts/published?page=${currentPage}&limit=${limit}`;
+            endpoint = buildApiUrl(`posts/published?page=${currentPage}&limit=${limit}`);
             break;
           case 'draft':
-            endpoint = `${apiUrl}/posts/draft?page=${currentPage}&limit=${limit}`;
+            endpoint = buildApiUrl(`posts/draft?page=${currentPage}&limit=${limit}`);
             break;
           case 'scheduled':
-            endpoint = `${apiUrl}/posts/scheduled?page=${currentPage}&limit=${limit}`;
+            endpoint = buildApiUrl(`posts/scheduled?page=${currentPage}&limit=${limit}`);
             break;
           default:
-            endpoint = `${apiUrl}/posts/published?page=${currentPage}&limit=${limit}`;
+            endpoint = buildApiUrl(`posts/published?page=${currentPage}&limit=${limit}`);
         }
       }
       
@@ -313,8 +306,7 @@ export function usePosts({ initialLimit = 10 }: UsePostsProps = {}): UsePostsRet
     if (isLoading) return false
     setIsLoading(true)
     try {
-      const apiUrl = getBaseUrl()
-      const response = await customFetch(`${apiUrl}/posts/${postId}`, {
+      const response = await customFetch(buildApiUrl(`posts/${postId}`), {
         method: "DELETE"
       })
       
@@ -361,8 +353,7 @@ export function usePosts({ initialLimit = 10 }: UsePostsProps = {}): UsePostsRet
     if (isLoading) return false
     setIsLoading(true)
     try {
-      const apiUrl = getBaseUrl()
-      const response = await customFetch(`${apiUrl}/posts/${postId}`, {
+      const response = await customFetch(buildApiUrl(`posts/${postId}`), {
         method: "PUT",
         headers: {
           'Content-Type': 'application/json'

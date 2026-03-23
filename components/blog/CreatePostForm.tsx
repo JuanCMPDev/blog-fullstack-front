@@ -3,13 +3,14 @@ import { FileText } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
-import { ContentEditor } from '@/components/admin/ContentEditor'
+import { PostEditorV2 } from '@/components/admin/PostEditorV2'
 import { TagInput } from '@/components/admin/TagInput'
 import { CoverImageUpload } from '@/components/admin/CoverImageUpload'
+import { CourseSelector } from '@/components/admin/CourseSelector'
 import { Card, CardContent } from '@/components/ui/card'
 import { useRouter } from 'next/navigation'
 import { PostFormData } from '@/lib/types'
-import { UseFormRegister, UseFormHandleSubmit, Control, FieldErrors, UseFormSetValue } from 'react-hook-form'
+import { UseFormRegister, UseFormHandleSubmit, Control, FieldErrors, UseFormSetValue, useWatch } from 'react-hook-form'
 
 interface CreatePostFormProps {
   onSubmit: (data: PostFormData, isDraft?: boolean) => void;
@@ -26,6 +27,9 @@ interface CreatePostFormProps {
   setValue: UseFormSetValue<PostFormData>;
   tags: string[];
   setTags: React.Dispatch<React.SetStateAction<string[]>>;
+  courseId: string | null;
+  courseOrder: number | null;
+  onCourseChange: (courseId: string | null, courseOrder: number | null) => void;
 }
 
 const CreatePostForm = ({
@@ -42,9 +46,14 @@ const CreatePostForm = ({
   errors,
   setValue,
   tags,
-  setTags
+  setTags,
+  courseId,
+  courseOrder,
+  onCourseChange,
 }: CreatePostFormProps) => {
   const router = useRouter()
+  const currentContent = useWatch({ control, name: 'content' })
+  const currentContentV2 = useWatch({ control, name: 'contentV2' })
 
   return (
     <div className="container mx-auto px-4 py-8">
@@ -112,7 +121,15 @@ const CreatePostForm = ({
                   )}
                 </div>
 
-                <ContentEditor control={control} error={errors.content?.message || ''} />
+                <PostEditorV2
+                  initialLegacyContent={currentContent || ''}
+                  initialContentV2={currentContentV2 || ''}
+                  onChange={({ legacyContent, contentV2 }) => {
+                    setValue('content', legacyContent, { shouldDirty: true, shouldValidate: true })
+                    setValue('contentV2', contentV2, { shouldDirty: true })
+                  }}
+                  error={errors.content?.message || ''}
+                />
 
                 <TagInput
                   tags={tags}
@@ -121,6 +138,12 @@ const CreatePostForm = ({
                     setValue('tags', newTags)
                   }}
                   error={errors.tags?.message || ''}
+                />
+
+                <CourseSelector
+                  courseId={courseId}
+                  courseOrder={courseOrder}
+                  onChange={onCourseChange}
                 />
 
                 <CoverImageUpload

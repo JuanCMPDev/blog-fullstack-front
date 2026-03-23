@@ -16,6 +16,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { countries } from "@/lib/countries"
 import { Separator } from "@/components/ui/separator"
 import { Tag } from "@/components/common/Tag"
+import { createLogger } from "@/lib/logger"
+
+const logger = createLogger("EditProfileForm")
 
 const profileFormSchema = z.object({
   name: z.string().min(2, {
@@ -82,7 +85,10 @@ export const EditProfileForm: React.FC<EditProfileFormProps> = ({ profile, onCan
 
   // Extraer el código del país a partir de la ubicación guardada
   const countryCode = extractCountryCode(profile.location || "");
-  console.log("Ubicación del perfil:", profile.location, "Código de país extraído:", countryCode);
+  logger.debug("Ubicación y código de país extraído", {
+    location: profile.location,
+    countryCode,
+  });
 
   const form = useForm<ProfileFormValues>({
     resolver: zodResolver(profileFormSchema),
@@ -105,7 +111,10 @@ export const EditProfileForm: React.FC<EditProfileFormProps> = ({ profile, onCan
   useEffect(() => {
     // Extraer el código del país cada vez que cambia el perfil
     const profileCountryCode = extractCountryCode(profile.location || "");
-    console.log("Reset formulario - Ubicación:", profile.location, "Código:", profileCountryCode);
+    logger.debug("Reset formulario con ubicación", {
+      location: profile.location,
+      countryCode: profileCountryCode,
+    });
     
     form.reset({
       name: profile.name,

@@ -1,4 +1,5 @@
 import { customFetch } from "@/lib/customFetch";
+import { buildApiUrl } from "@/lib/api";
 import type { Post } from "@/lib/types";
 
 // Interfaz para la respuesta paginada de la API
@@ -12,9 +13,6 @@ interface ApiResponse<T> {
   };
 }
 
-// URL base de la API (debería estar en un archivo de configuración o variable de entorno)
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "";
-
 /**
  * Obtiene los posts recomendados desde la API
  * @param limit Número de posts a obtener (por defecto 3)
@@ -22,7 +20,7 @@ const API_URL = process.env.NEXT_PUBLIC_API_URL || "";
  */
 export async function getRecommendedPosts(limit: number = 3): Promise<Post[]> {
   try {
-    const response = await customFetch(`${API_URL}posts/recommended?limit=${limit}`);
+    const response = await customFetch(buildApiUrl(`posts/recommended?limit=${limit}`));
     
     if (!response.ok) {
       throw new Error(`Error al obtener posts recomendados: ${response.status}`);
@@ -44,7 +42,7 @@ export async function getRecommendedPosts(limit: number = 3): Promise<Post[]> {
  */
 export async function getPosts(page: number = 1, limit: number = 10): Promise<ApiResponse<Post>> {
   try {
-    const response = await customFetch(`${API_URL}posts?page=${page}&limit=${limit}`);
+    const response = await customFetch(buildApiUrl(`posts?page=${page}&limit=${limit}`));
     
     if (!response.ok) {
       throw new Error(`Error al obtener posts: ${response.status}`);

@@ -1,7 +1,8 @@
-import React, { useState, useEffect } from "react"
+import React, { useState } from "react"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
+import { getAvatarUrl } from "@/lib/utils"
 import { MessageSquare, Loader2 } from "lucide-react"
 import Link from "next/link"
 import { useAuth } from "@/lib/auth"
@@ -9,25 +10,14 @@ import { useToast } from "@/hooks/use-toast"
 
 interface CommentFormProps {
   onSubmitComment: (content: string) => Promise<boolean | undefined>
-  isLoading?: boolean
+  isSubmitting?: boolean
+  feedbackMessage?: string | null
 }
 
-const CommentForm: React.FC<CommentFormProps> = ({ onSubmitComment, isLoading: externalLoading = false }) => {
+const CommentForm: React.FC<CommentFormProps> = ({ onSubmitComment, isSubmitting = false, feedbackMessage }) => {
   const [newComment, setNewComment] = useState("")
-  const [internalSubmitting, setInternalSubmitting] = useState(false)
   const { user } = useAuth()
   const { toast } = useToast()
-  
-  // Estado compuesto que combina el estado de carga externo e interno
-  const submittingComment = internalSubmitting || externalLoading;
-  
-  // Efecto para limpiar el formulario si el estado externo cambia a no cargando
-  useEffect(() => {
-    // Si estaba cargando y ha terminado, podemos considerar resetear
-    if (!externalLoading && internalSubmitting) {
-      setInternalSubmitting(false);
-    }
-  }, [externalLoading, internalSubmitting]);
 
   const handleNewComment = async () => {
     if (!user) {
@@ -40,9 +30,8 @@ const CommentForm: React.FC<CommentFormProps> = ({ onSubmitComment, isLoading: e
     }
     
     if (!newComment.trim()) return
-    if (submittingComment) return // No permitir múltiples envíos
+    if (isSubmitting) return // No permitir múltiples envíos
 
-    setInternalSubmitting(true)
     try {
       const success = await onSubmitComment(newComment)
       if (success) {
@@ -55,15 +44,12 @@ const CommentForm: React.FC<CommentFormProps> = ({ onSubmitComment, isLoading: e
         description: "No se pudo enviar el comentario. Intenta de nuevo.",
         variant: "destructive",
       });
-    } finally {
-      // Asegurarnos de que nuestro estado interno siempre se actualice
-      setInternalSubmitting(false)
     }
   }
 
   // Manejar tecla Enter para enviar comentario
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-    if (e.key === 'Enter' && e.ctrlKey && !submittingComment && newComment.trim()) {
+    if (e.key === 'Enter' && e.ctrlKey && !isSubmitting && newComment.trim()) {
       e.preventDefault();
       handleNewComment();
     }
@@ -82,9 +68,9 @@ const CommentForm: React.FC<CommentFormProps> = ({ onSubmitComment, isLoading: e
 
   return (
     <div className="mb-6">
-      <div className="flex items-start space-x-4">
-        <Avatar className="w-10 h-10">
-          <AvatarImage src={user.avatar || "/placeholder.svg?height=40&width=40"} alt={typeof user.name === 'string' ? user.name : 'Usuario'} />
+      <div className="flex items-start gap-2 sm:gap-4">
+        <Avatar className="w-8 h-8 sm:w-10 sm:h-10 mt-1">
+          <AvatarImage src={getAvatarUrl(user.avatar)} alt={typeof user.name === 'string' ? user.name : 'Usuario'} />
           <AvatarFallback>{typeof user.name === 'string' && user.name.length > 0 ? user.name.charAt(0) : 'U'}</AvatarFallback>
         </Avatar>
         <div className="flex-grow">
@@ -94,18 +80,18 @@ const CommentForm: React.FC<CommentFormProps> = ({ onSubmitComment, isLoading: e
             onChange={(e) => setNewComment(e.target.value)}
             onKeyDown={handleKeyDown}
             className="mb-2 min-h-[100px] resize-none bg-gradient-to-br from-accent/40 to-secondary/20 rounded-lg shadow-sm"
-            disabled={submittingComment}
+            disabled={isSubmitting}
           />
-          <div className="flex justify-between items-center">
-            <div className="hidden md:block text-xs text-muted-foreground">
-              Presiona Ctrl+Enter para enviar
+          <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2">
+            <div className="text-xs text-muted-foreground order-2 sm:order-1" aria-live="polite">
+              {feedbackMessage ?? "Presiona Ctrl+Enter para enviar"}
             </div>
             <Button 
               onClick={handleNewComment} 
-              className="transition-all duration-200 ease-in-out hover:shadow-md"
-              disabled={submittingComment || !newComment.trim()}
+              className="transition-all duration-200 ease-in-out hover:shadow-md w-full sm:w-auto order-1 sm:order-2"
+              disabled={isSubmitting || !newComment.trim()}
             >
-              {submittingComment ? (
+              {isSubmitting ? (
                 <>
                   <Loader2 className="w-4 h-4 mr-2 animate-spin" />
                   Enviando...

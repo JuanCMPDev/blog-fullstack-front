@@ -19,6 +19,10 @@ export default function CreatePostPage() {
     setTags,
     handleTitleChange,
     onSubmit,
+    courseId,
+    setCourseId,
+    courseOrder,
+    setCourseOrder,
   } = useCreatePost([])
 
   return (
@@ -37,6 +41,9 @@ export default function CreatePostPage() {
       tags={tags}
       setTags={setTags}
       handleSubmit={handleSubmit}
+      courseId={courseId}
+      courseOrder={courseOrder}
+      onCourseChange={(id, order) => { setCourseId(id); setCourseOrder(order); }}
     />
   )
 }

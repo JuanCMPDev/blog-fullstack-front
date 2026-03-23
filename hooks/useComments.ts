@@ -1,8 +1,14 @@
-import { useState, useEffect, useCallback } from "react"
+import { useState, useEffect, useCallback, useMemo, useRef } from "react"
 import type { Comment, UseCommentsReturn } from "@/lib/types"
 import { useAuth } from "@/lib/auth"
 import { useToast } from "@/hooks/use-toast"
 import { customFetch } from "@/lib/customFetch"
+import { buildCommentLikeEndpoint, buildPostCommentsEndpoint, getLikeHttpMethod } from "@/lib/resource-endpoints"
+import { buildApiUrl } from "@/lib/api"
+import { createLogger } from "@/lib/logger"
+import { createCommentsTelemetry } from "@/lib/comments-telemetry"
+
+const logger = createLogger("useComments")
 
 // Interfaz para datos de comentarios de la API
 interface ApiCommentData {
@@ -10,13 +16,16 @@ interface ApiCommentData {
   content?: string;
   author?: {
     id?: string;
+    nick?: string;
     name?: string;
     avatar?: string;
   };
   authorId?: string;
   likes?: number;
+  hasLiked?: boolean;
   replies?: ApiCommentData[];
   createdAt?: string;
+  updatedAt?: string;
   postId?: number;
   parentId?: string;
   [key: string]: unknown;
@@ -51,9 +60,10 @@ export const useComments = ({ postId, initialComments = [] }: UseCommentsProps):
     }
   
     // Asegurar que el autor sea un objeto válido
-    const author = comment.author && typeof comment.author === 'object' 
+    const author = comment.author && typeof comment.author === 'object'
       ? {
           id: comment.author.id || 'unknown',
+          nick: comment.author.nick,
           name: comment.author.name || 'Usuario',
           avatar: comment.author.avatar || ''
         }
@@ -82,21 +92,25 @@ export const useComments = ({ postId, initialComments = [] }: UseCommentsProps):
   const structuredInitialComments = safeInitialComments.map(ensureCommentStructure);
   
   const [comments, setComments] = useState<Comment[]>(structuredInitialComments)
+  const likingInFlight = useState(() => new Set<string>())[0]
+  const orderChangeTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const [replyingTo, setReplyingTo] = useState<string | null>(null)
   const [replyContent, setReplyContent] = useState("")
-  const [isLoading, setIsLoading] = useState(false)
+  const [isFetchingList, setIsFetchingList] = useState(false)
+  const [isSubmittingComment, setIsSubmittingComment] = useState(false)
+  const [isSubmittingReply, setIsSubmittingReply] = useState(false)
+  const [isLoadingMore, setIsLoadingMore] = useState(false)
+  const [commentsError, setCommentsError] = useState<string | null>(null)
+  const [liveMessage, setLiveMessage] = useState("")
+  const [commentFeedback, setCommentFeedback] = useState<string | null>(null)
+  const [replyFeedback, setReplyFeedback] = useState<string | null>(null)
   const { user } = useAuth()
   const { toast } = useToast()
-
-  // Función para obtener la URL base de la API
-  const getBaseApiUrl = useCallback(() => {
-    let apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
-    // Eliminar la barra final si existe
-    if (apiUrl.endsWith('/')) {
-      apiUrl = apiUrl.slice(0, -1);
-    }
-    return apiUrl;
-  }, []);
+  const telemetry = useMemo(() =>
+    createCommentsTelemetry((event) => {
+      logger.info("comments_telemetry", event)
+    })
+  , [])
 
   // Añadir estados para paginación y orden
   const [page, setPage] = useState(1);
@@ -118,28 +132,44 @@ export const useComments = ({ postId, initialComments = [] }: UseCommentsProps):
     if (!postId) {
       // Si no hay postId, simplemente establecer un array vacío y terminar el estado de carga
       setComments([]);
-      setIsLoading(false);
+      setIsFetchingList(false);
+      setIsLoadingMore(false);
       return;
     }
     
     // Evitar iniciar una nueva carga si ya está en proceso
-    if (isLoading && pageNum === page) return;
-    
-    setIsLoading(true);
+    if ((isFetchingList || isLoadingMore) && pageNum === page) return;
+
+    const currentOrder = orderValue || order;
+    const isLoadMore = pageNum > 1 && !resetList;
+
+    setCommentsError(null);
+    if (isLoadMore) {
+      setIsLoadingMore(true);
+    } else {
+      setIsFetchingList(true);
+    }
+
+    const telemetryToken = telemetry.start("fetch_comments", {
+      postId,
+      page: pageNum,
+      order: currentOrder,
+      resetList,
+    })
     
     try {
-      const apiUrl = getBaseApiUrl();
-      
       // Usar el valor de orden pasado directamente o el del estado
-      const currentOrder = orderValue || order;
       
       // El backend espera directamente los valores: newest, oldest, likes_desc, likes_asc
       // No necesitamos hacer conversión, usamos el valor directamente
-      console.log(`[DEBUG] Ejecutando fetchComments con orden: ${currentOrder}`);
       
       // Usar el nuevo endpoint que ya devuelve la estructura completa de comentarios anidados
-      const endpoint = `${apiUrl}/comments/post/${postId}/nested?page=${pageNum}&limit=${limit}&order=${currentOrder}`;
-      console.log(`[DEBUG] Cargando comentarios desde: ${endpoint}`);
+      const endpoint = buildPostCommentsEndpoint(postId, {
+        page: pageNum,
+        limit,
+        order: currentOrder,
+      });
+      logger.debug(`Cargando comentarios desde: ${endpoint}`)
       
       const response = await customFetch(endpoint);
       
@@ -160,33 +190,40 @@ export const useComments = ({ postId, initialComments = [] }: UseCommentsProps):
       
       // Si no hay comentarios, establecer array vacío y terminar
       if (commentsData.length === 0) {
-        console.log('[DEBUG] No se encontraron comentarios en la respuesta');
         if (resetList) {
           setComments([]);
         }
         setMeta(metaData);
         setHasMore(false);
         setPage(metaData.currentPage);
-        setIsLoading(false);
+        telemetry.success(telemetryToken, {
+          commentsCount: 0,
+          totalItems: metaData.totalItems,
+          totalPages: metaData.totalPages,
+        })
+        setIsFetchingList(false);
+        setIsLoadingMore(false);
         return;
       }
       
-      console.log(`[DEBUG] Se encontraron ${commentsData.length} comentarios principales con sus respuestas anidadas`);
+      logger.debug(`Se encontraron ${commentsData.length} comentarios principales con sus respuestas anidadas`)
       
       // Asegurar que cada comentario tenga la estructura correcta (recursivamente)
       const ensureNestedStructure = (comment: ApiCommentData): Comment => {
-        // Crear una estructura base para el comentario
         const baseComment: Comment = {
           id: comment.id,
           content: comment.content || '',
           likes: comment.likes || 0,
           replies: [],
           createdAt: comment.createdAt || new Date().toISOString(),
+          updatedAt: typeof comment.updatedAt === 'string' ? comment.updatedAt : undefined,
           postId: comment.postId || undefined,
           parentId: comment.parentId,
-          author: comment.author 
+          hasLiked: typeof comment.hasLiked === 'boolean' ? comment.hasLiked : false,
+          author: comment.author
             ? {
                 id: comment.author.id || 'unknown',
+                nick: comment.author.nick,
                 name: comment.author.name || 'Usuario',
                 avatar: comment.author.avatar || ''
               }
@@ -196,12 +233,11 @@ export const useComments = ({ postId, initialComments = [] }: UseCommentsProps):
                 avatar: ''
               }
         };
-        
-        // Procesar recursivamente las respuestas si existen
+
         if (comment.replies && Array.isArray(comment.replies) && comment.replies.length > 0) {
           baseComment.replies = comment.replies.map(ensureNestedStructure);
         }
-        
+
         return baseComment;
       };
       
@@ -220,7 +256,7 @@ export const useComments = ({ postId, initialComments = [] }: UseCommentsProps):
       };
       
       countReplies(structuredComments);
-      console.log(`[DEBUG] Total de respuestas cargadas en todos los niveles: ${totalRepliesCount}`);
+      logger.debug(`Total de respuestas cargadas en todos los niveles: ${totalRepliesCount}`)
 
       // Actualizar el estado con los comentarios cargados
       if (resetList || pageNum === 1) {
@@ -233,9 +269,18 @@ export const useComments = ({ postId, initialComments = [] }: UseCommentsProps):
       setMeta(metaData);
       setHasMore(metaData.currentPage < metaData.totalPages);
       setPage(metaData.currentPage);
+      telemetry.success(telemetryToken, {
+        commentsCount: structuredComments.length,
+        totalItems: metaData.totalItems,
+        totalPages: metaData.totalPages,
+      })
       
     } catch (error) {
-      console.error('Error al obtener comentarios:', error);
+      telemetry.error(telemetryToken, error, {
+        page: pageNum,
+      })
+      setCommentsError("No se pudieron cargar los comentarios. Intenta nuevamente.")
+      logger.error('Error al obtener comentarios', error)
       toast({
         title: "Error",
         description: "No se pudieron cargar los comentarios. Intente nuevamente.",
@@ -246,33 +291,43 @@ export const useComments = ({ postId, initialComments = [] }: UseCommentsProps):
       }
     } finally {
       // Garantizar que el estado de carga termine siempre
-      setIsLoading(false);
+      setIsFetchingList(false);
+      setIsLoadingMore(false);
     }
-  }, [postId, getBaseApiUrl, toast, isLoading, page, limit, order]);
+  }, [postId, toast, isFetchingList, isLoadingMore, page, limit, order, telemetry]);
 
   // Función para cargar más comentarios
   const loadMoreComments = useCallback(() => {
-    if (hasMore && !isLoading) {
+    if (hasMore && !isLoadingMore && !isFetchingList) {
       fetchComments(page + 1, false, order);
     }
-  }, [fetchComments, hasMore, isLoading, page, order]);
+  }, [fetchComments, hasMore, isLoadingMore, isFetchingList, page, order]);
 
-  // Función para cambiar el orden de los comentarios
+  const retryComments = useCallback(() => {
+    fetchComments(1, true, order)
+  }, [fetchComments, order]);
+
+  // Función para cambiar el orden de los comentarios (con debounce de 300ms)
   const changeCommentsOrder = useCallback((newOrder: string) => {
-    if (isLoading || newOrder === order) return;
-    
-    // Validar que el orden sea uno de los valores permitidos
+    if (newOrder === order) return;
+
     const validOrders = ['newest', 'oldest', 'likes_desc', 'likes_asc'];
     if (!validOrders.includes(newOrder)) {
-      console.error(`[ERROR] Orden inválido: ${newOrder}. Debe ser uno de: ${validOrders.join(', ')}`);
+      logger.error(`Orden inválido: ${newOrder}. Debe ser uno de: ${validOrders.join(', ')}`)
       return;
     }
-    
-    console.log(`[DEBUG] Cambiando orden de comentarios: ${order} -> ${newOrder}`);
-    setOrder(newOrder);
-    // Enviamos el nuevo valor directamente a fetchComments
-    fetchComments(1, true, newOrder);
-  }, [fetchComments, isLoading, order]);
+
+    if (orderChangeTimer.current) {
+      clearTimeout(orderChangeTimer.current);
+    }
+
+    orderChangeTimer.current = setTimeout(() => {
+      if (isFetchingList || isLoadingMore) return;
+      logger.debug(`Cambiando orden de comentarios: ${order} -> ${newOrder}`)
+      setOrder(newOrder);
+      fetchComments(1, true, newOrder);
+    }, 300);
+  }, [fetchComments, isFetchingList, isLoadingMore, order, orderChangeTimer]);
 
   // Cargar comentarios al inicio
   useEffect(() => {
@@ -292,7 +347,8 @@ export const useComments = ({ postId, initialComments = [] }: UseCommentsProps):
       // Si no hay postId, no podemos cargar comentarios
       if (!postId) {
         if (isMounted) {
-          setIsLoading(false);
+          setIsFetchingList(false);
+          setIsLoadingMore(false);
           setHasInitiallyLoaded(true);
         }
         return;
@@ -332,51 +388,70 @@ export const useComments = ({ postId, initialComments = [] }: UseCommentsProps):
       return;
     }
 
+    // Evitar peticiones duplicadas mientras hay una en curso para este comentario
+    if (likingInFlight.has(commentId)) return;
+    likingInFlight.add(commentId);
+
     try {
-      const apiUrl = getBaseApiUrl();
-      const response = await customFetch(`${apiUrl}/likes/comment`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ commentId }),
+      const findCommentById = (commentsList: Comment[], id: string): Comment | null => {
+        for (const comment of commentsList) {
+          if (comment.id === id) {
+            return comment;
+          }
+          if (comment.replies.length > 0) {
+            const foundInReplies = findCommentById(comment.replies, id);
+            if (foundInReplies) {
+              return foundInReplies;
+            }
+          }
+        }
+        return null;
+      };
+
+      const currentComment = findCommentById(comments, commentId);
+      const wasLiked = Boolean(currentComment?.hasLiked);
+      const currentLikes = typeof currentComment?.likes === 'number' ? currentComment.likes : 0;
+
+      const response = await customFetch(buildCommentLikeEndpoint(commentId), {
+        method: getLikeHttpMethod(wasLiked),
       });
       
       if (!response.ok) {
         throw new Error(`Error al procesar like: ${response.statusText}`);
       }
       
-      const responseJson = await response.json();
-      console.log('Respuesta like:', responseJson);
-      
-      // Extraer solo los valores que necesitamos de la respuesta
-      let likesCount = 0;
-      let liked = false;
-      
-      // Verificar qué estructura tiene la respuesta
-      if (responseJson && typeof responseJson === 'object') {
-        // Estructura de respuesta directa: { liked: boolean, likesCount: number }
-        if (typeof responseJson.likesCount === 'number') {
-          likesCount = responseJson.likesCount;
-        } else if (typeof responseJson.count === 'number') {
-          likesCount = responseJson.count;
-        }
-        
-        if (typeof responseJson.liked === 'boolean') {
-          liked = responseJson.liked;
-        }
-        
-        // Estructura con data: { data: { liked: boolean, likesCount: number } }
-        if (responseJson.data && typeof responseJson.data === 'object') {
-          if (typeof responseJson.data.likesCount === 'number') {
-            likesCount = responseJson.data.likesCount;
-          } else if (typeof responseJson.data.count === 'number') {
-            likesCount = responseJson.data.count;
+      let liked = !wasLiked;
+      let likesCount = Math.max(0, currentLikes + (liked ? 1 : -1));
+
+      if (response.status !== 204) {
+        try {
+          const responseJson = await response.json();
+          logger.debug("Respuesta like", { responseJson });
+          if (responseJson && typeof responseJson === 'object') {
+            if (typeof responseJson.likesCount === 'number') {
+              likesCount = responseJson.likesCount;
+            } else if (typeof responseJson.count === 'number') {
+              likesCount = responseJson.count;
+            }
+            
+            if (typeof responseJson.liked === 'boolean') {
+              liked = responseJson.liked;
+            }
+            
+            if (responseJson.data && typeof responseJson.data === 'object') {
+              if (typeof responseJson.data.likesCount === 'number') {
+                likesCount = responseJson.data.likesCount;
+              } else if (typeof responseJson.data.count === 'number') {
+                likesCount = responseJson.data.count;
+              }
+              
+              if (typeof responseJson.data.liked === 'boolean') {
+                liked = responseJson.data.liked;
+              }
+            }
           }
-          
-          if (typeof responseJson.data.liked === 'boolean') {
-            liked = responseJson.data.liked;
-          }
+        } catch {
+          // Sin body JSON: usamos cálculo local
         }
       }
       
@@ -389,14 +464,16 @@ export const useComments = ({ postId, initialComments = [] }: UseCommentsProps):
         }))
       );
     } catch (error) {
-      console.error('Error al dar like al comentario:', error);
+      logger.error('Error al dar like al comentario', error);
       toast({
         title: "Error",
         description: "No se pudo procesar el like. Intenta de nuevo más tarde.",
         variant: "destructive",
       });
+    } finally {
+      likingInFlight.delete(commentId);
     }
-  }, [user, getBaseApiUrl, toast]);
+  }, [user, toast, comments, likingInFlight]);
 
   // Responder a un comentario
   const handleReply = useCallback((commentId: string) => {
@@ -410,6 +487,7 @@ export const useComments = ({ postId, initialComments = [] }: UseCommentsProps):
     }
     setReplyingTo(commentId);
     setReplyContent("");
+    setReplyFeedback(null)
   }, [user, toast]);
 
   // Enviar una respuesta a un comentario
@@ -418,17 +496,53 @@ export const useComments = ({ postId, initialComments = [] }: UseCommentsProps):
       return;
     }
 
-    setIsLoading(true); // Indicar que estamos cargando durante la creación de la respuesta
+    const telemetryToken = telemetry.start("submit_reply", {
+      postId,
+      parentId: replyingTo,
+      contentLength: replyContent.trim().length,
+    })
+
+    const trimmedReply = replyContent.trim()
+    const optimisticReplyId = `temp-reply-${Date.now()}`
+    const optimisticReply = ensureCommentStructure({
+      id: optimisticReplyId,
+      content: trimmedReply,
+      likes: 0,
+      replies: [],
+      createdAt: new Date().toISOString(),
+      postId,
+      parentId: replyingTo,
+      author: user
+        ? {
+            id: user.userId,
+            nick: user.nick,
+            name: user.name,
+            avatar: user.avatar || "",
+          }
+        : {
+            id: "unknown",
+            name: "Usuario",
+            avatar: "",
+          },
+    } as Comment)
+
+    setIsSubmittingReply(true);
+    setReplyFeedback("Enviando respuesta...")
+    setComments(prevComments =>
+      updateCommentRecursively(prevComments, replyingTo, comment => ({
+        ...comment,
+        replies: [...comment.replies, optimisticReply],
+      }))
+    )
 
     try {
-      const apiUrl = getBaseApiUrl();
-      const response = await customFetch(`${apiUrl}/comments`, {
+      const response = await customFetch(buildApiUrl("comments"), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          content: replyContent.trim(),
+          content: trimmedReply,
           postId,
           parentId: replyingTo
         }),
@@ -439,12 +553,12 @@ export const useComments = ({ postId, initialComments = [] }: UseCommentsProps):
       }
       
       const responseJson = await response.json();
-      console.log('Respuesta al crear reply:', responseJson);
+      logger.debug("Respuesta al crear reply", { responseJson });
       
       // Crear una estructura segura para la respuesta
       const replyData: Partial<Comment> = {
         id: '',
-        content: replyContent.trim(),
+        content: trimmedReply,
         likes: 0,
         replies: [],
         createdAt: new Date().toISOString(),
@@ -467,27 +581,21 @@ export const useComments = ({ postId, initialComments = [] }: UseCommentsProps):
           if (source.author && typeof source.author === 'object') {
             replyData.author = {
               id: source.author.id || 'unknown',
+              nick: source.author.nick || user?.nick,
               name: source.author.name || 'Usuario',
               avatar: source.author.avatar || ''
             };
-          } else if (source.authorId && user) {
-            // Si solo tenemos authorId pero conocemos al usuario
-            replyData.author = {
-              id: user.userId,
-              name: user.name,
-              avatar: user.avatar || ''
-            };
           } else if (user) {
-            // Usar la información del usuario actual como fallback
             replyData.author = {
               id: user.userId,
+              nick: user.nick,
               name: user.name,
               avatar: user.avatar || ''
             };
           }
         }
       }
-      
+
       // Asegurar que tenemos un ID válido
       if (!replyData.id) {
         replyData.id = Math.random().toString();
@@ -499,12 +607,9 @@ export const useComments = ({ postId, initialComments = [] }: UseCommentsProps):
       // Asegurar que el nuevo comentario tenga la estructura correcta
       const structuredNewReply = ensureCommentStructure(newReply);
       
-      // Actualizar el estado con la nueva respuesta
+      // Reemplazar la respuesta optimista por la respuesta real
       setComments(prevComments => 
-        updateCommentRecursively(prevComments, replyingTo, comment => ({
-          ...comment,
-          replies: [...comment.replies, structuredNewReply]
-        }))
+        updateCommentRecursively(prevComments, optimisticReplyId, () => structuredNewReply)
       );
       
       // Limpiar el formulario de respuesta
@@ -515,17 +620,25 @@ export const useComments = ({ postId, initialComments = [] }: UseCommentsProps):
         title: "Respuesta enviada",
         description: "Tu respuesta ha sido publicada correctamente."
       });
+      setReplyFeedback("Respuesta publicada")
+      setLiveMessage("Respuesta enviada correctamente")
+      telemetry.success(telemetryToken, {
+        replyId: structuredNewReply.id,
+      })
     } catch (error) {
-      console.error('Error al responder al comentario:', error);
+      setComments(prevComments => removeCommentRecursively(prevComments, optimisticReplyId))
+      setReplyFeedback("No se pudo enviar la respuesta")
+      telemetry.error(telemetryToken, error)
+      logger.error('Error al responder al comentario', error);
       toast({
         title: "Error",
         description: "No se pudo enviar tu respuesta. Intenta de nuevo más tarde.",
         variant: "destructive",
       });
     } finally {
-      setIsLoading(false); // Terminar el estado de carga independientemente del resultado
+      setIsSubmittingReply(false);
     }
-  }, [user, replyingTo, replyContent, postId, getBaseApiUrl, toast]);
+  }, [user, replyingTo, replyContent, postId, toast, telemetry]);
 
   // Añadir un nuevo comentario principal
   const addNewComment = useCallback(async (newCommentContent: string) => {
@@ -533,17 +646,46 @@ export const useComments = ({ postId, initialComments = [] }: UseCommentsProps):
       return false;
     }
 
-    setIsLoading(true); // Indicar que estamos cargando durante la creación del comentario
+    const telemetryToken = telemetry.start("submit_comment", {
+      postId,
+      contentLength: newCommentContent.trim().length,
+    })
+
+    const trimmedContent = newCommentContent.trim()
+    const optimisticCommentId = `temp-comment-${Date.now()}`
+    const optimisticComment = ensureCommentStructure({
+      id: optimisticCommentId,
+      content: trimmedContent,
+      likes: 0,
+      replies: [],
+      createdAt: new Date().toISOString(),
+      postId,
+      author: user
+        ? {
+            id: user.userId,
+            nick: user.nick,
+            name: user.name,
+            avatar: user.avatar || "",
+          }
+        : {
+            id: "unknown",
+            name: "Usuario",
+            avatar: "",
+          },
+    } as Comment)
+
+    setIsSubmittingComment(true);
+    setCommentFeedback("Enviando comentario...")
+    setComments(prevComments => [optimisticComment, ...prevComments]);
 
     try {
-      const apiUrl = getBaseApiUrl();
-      const response = await customFetch(`${apiUrl}/comments`, {
+      const response = await customFetch(buildApiUrl("comments"), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          content: newCommentContent.trim(),
+          content: trimmedContent,
           postId,
           parentId: null
         }),
@@ -554,12 +696,12 @@ export const useComments = ({ postId, initialComments = [] }: UseCommentsProps):
       }
       
       const responseJson = await response.json();
-      console.log('Respuesta al crear comentario:', responseJson);
+      logger.debug("Respuesta al crear comentario", { responseJson });
       
       // Extraer el nuevo comentario con una estructura segura
       const newCommentData: Partial<Comment> = {
         id: '',
-        content: newCommentContent.trim(),
+        content: trimmedContent,
         likes: 0,
         replies: [],
         createdAt: new Date().toISOString(),
@@ -581,20 +723,14 @@ export const useComments = ({ postId, initialComments = [] }: UseCommentsProps):
           if (source.author && typeof source.author === 'object') {
             newCommentData.author = {
               id: source.author.id || 'unknown',
+              nick: source.author.nick || user?.nick,
               name: source.author.name || 'Usuario',
               avatar: source.author.avatar || ''
             };
-          } else if (source.authorId && user) {
-            // Si solo tenemos authorId pero conocemos al usuario
-            newCommentData.author = {
-              id: user.userId,
-              name: user.name,
-              avatar: user.avatar || ''
-            };
           } else if (user) {
-            // Usar la información del usuario actual como fallback
             newCommentData.author = {
               id: user.userId,
+              nick: user.nick,
               name: user.name,
               avatar: user.avatar || ''
             };
@@ -613,17 +749,29 @@ export const useComments = ({ postId, initialComments = [] }: UseCommentsProps):
       // Asegurar que la estructura sea segura
       const structuredNewComment = ensureCommentStructure(newComment);
       
-      // Añadir el nuevo comentario al inicio de la lista
-      setComments(prevComments => [structuredNewComment, ...prevComments]);
+      // Reemplazar el comentario optimista por el comentario real
+      setComments(prevComments =>
+        prevComments.map(comment =>
+          comment.id === optimisticCommentId ? structuredNewComment : comment
+        )
+      );
       
       toast({
         title: "Comentario enviado",
         description: "Tu comentario ha sido publicado correctamente."
       });
+      setCommentFeedback("Comentario publicado")
+      setLiveMessage("Comentario enviado correctamente")
+      telemetry.success(telemetryToken, {
+        commentId: structuredNewComment.id,
+      })
       
       return true;
     } catch (error) {
-      console.error('Error al crear comentario:', error);
+      setComments(prevComments => prevComments.filter(comment => comment.id !== optimisticCommentId));
+      setCommentFeedback("No se pudo enviar el comentario")
+      telemetry.error(telemetryToken, error)
+      logger.error('Error al crear comentario', error);
       toast({
         title: "Error",
         description: "No se pudo enviar tu comentario. Intenta de nuevo más tarde.",
@@ -631,40 +779,76 @@ export const useComments = ({ postId, initialComments = [] }: UseCommentsProps):
       });
       return false;
     } finally {
-      setIsLoading(false); // Terminar el estado de carga independientemente del resultado
+      setIsSubmittingComment(false);
     }
-  }, [user, postId, getBaseApiUrl, toast]);
+  }, [user, postId, toast, telemetry]);
 
   // Eliminar un comentario
   const deleteComment = useCallback(async (commentId: string) => {
     if (!user) return;
 
     try {
-      const apiUrl = getBaseApiUrl();
-      const response = await customFetch(`${apiUrl}/comments/${commentId}`, {
+      const response = await customFetch(buildApiUrl(`comments/${commentId}`), {
         method: 'DELETE',
       });
-      
+
       if (!response.ok) {
         throw new Error(`Error al eliminar comentario: ${response.statusText}`);
       }
-      
+
       // Eliminar el comentario del estado
       setComments(prevComments => removeCommentRecursively(prevComments, commentId));
-      
+
       toast({
         title: "Comentario eliminado",
         description: "El comentario ha sido eliminado correctamente."
       });
     } catch (error) {
-      console.error('Error al eliminar comentario:', error);
+      logger.error('Error al eliminar comentario', error);
       toast({
         title: "Error",
         description: "No se pudo eliminar el comentario. Intenta de nuevo más tarde.",
         variant: "destructive",
       });
     }
-  }, [user, getBaseApiUrl, toast]);
+  }, [user, toast]);
+
+  // Editar un comentario
+  const editComment = useCallback(async (commentId: string, newContent: string) => {
+    if (!user) return;
+
+    try {
+      const response = await customFetch(buildApiUrl(`comments/${commentId}`), {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ content: newContent }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`Error al editar comentario: ${response.statusText}`);
+      }
+
+      setComments(prevComments =>
+        updateCommentRecursively(prevComments, commentId, comment => ({
+          ...comment,
+          content: newContent,
+          updatedAt: new Date().toISOString(),
+        }))
+      );
+
+      toast({
+        title: "Comentario actualizado",
+        description: "El comentario ha sido editado correctamente.",
+      });
+    } catch (error) {
+      logger.error('Error al editar comentario', error);
+      toast({
+        title: "Error",
+        description: "No se pudo editar el comentario. Intenta de nuevo más tarde.",
+        variant: "destructive",
+      });
+    }
+  }, [user, toast]);
 
   // Función auxiliar para actualizar un comentario recursivamente
   const updateCommentRecursively = (comments: Comment[], commentId: string, updateFn: (comment: Comment) => Comment): Comment[] => {
@@ -672,7 +856,7 @@ export const useComments = ({ postId, initialComments = [] }: UseCommentsProps):
       if (comment.id === commentId) {
         return updateFn(comment);
       }
-      if (comment.replies.length > 0) {
+      if (Array.isArray(comment.replies) && comment.replies.length > 0) {
         return {
           ...comment,
           replies: updateCommentRecursively(comment.replies, commentId, updateFn)
@@ -684,20 +868,24 @@ export const useComments = ({ postId, initialComments = [] }: UseCommentsProps):
 
   // Función auxiliar para eliminar un comentario recursivamente
   const removeCommentRecursively = (comments: Comment[], commentId: string): Comment[] => {
-    return comments.filter(comment => {
-        if (comment.id === commentId) {
-        return false;
-      }
-      if (comment.replies.length > 0) {
-        comment.replies = removeCommentRecursively(comment.replies, commentId);
-      }
-      return true;
-    });
+    return comments
+      .filter(comment => comment.id !== commentId)
+      .map(comment => ({
+        ...comment,
+        replies: Array.isArray(comment.replies) ? removeCommentRecursively(comment.replies, commentId) : []
+      }));
   };
 
   return {
     comments,
-    isLoading,
+    isFetchingList,
+    isSubmittingComment,
+    isSubmittingReply,
+    isLoadingMore,
+    commentsError,
+    liveMessage,
+    commentFeedback,
+    replyFeedback,
     replyingTo,
     replyContent,
     handleLike,
@@ -705,9 +893,14 @@ export const useComments = ({ postId, initialComments = [] }: UseCommentsProps):
     submitReply,
     setReplyContent,
     addNewComment,
-    cancelReply: () => setReplyingTo(null),
+    cancelReply: () => {
+      setReplyingTo(null)
+      setReplyFeedback(null)
+    },
     deleteComment,
+    editComment,
     loadMoreComments,
+    retryComments,
     changeCommentsOrder,
     hasMore,
     meta,

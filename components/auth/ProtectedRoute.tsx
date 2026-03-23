@@ -6,6 +6,9 @@ import { useAuth } from "@/lib/auth"
 import { LoadingSpinner } from "@/components/common/LoadingSpinner"
 import type React from "react"
 import { ProtectedRouteProps } from "@/lib/types"
+import { createLogger } from "@/lib/logger"
+
+const logger = createLogger("ProtectedRoute")
 
 export function ProtectedRoute({ children, allowedRoles }: ProtectedRouteProps) {
   const router = useRouter()
@@ -32,7 +35,7 @@ export function ProtectedRoute({ children, allowedRoles }: ProtectedRouteProps) 
       if (!user && !refreshAttempted) {
         setRefreshAttempted(true);
         try {
-          console.log("Intentando refrescar token...");
+          logger.debug("Intentando refrescar token");
           await refreshAccessToken();
           // Esperamos un poco para que se actualice el estado
           setTimeout(() => {
@@ -65,19 +68,21 @@ export function ProtectedRoute({ children, allowedRoles }: ProtectedRouteProps) 
     // y sabemos con certeza que el usuario no tiene acceso
     if (!isVerifying && !isLoading) {
       if (!user) {
-        console.log("No hay usuario autenticado, redirigiendo...");
+        logger.info("No hay usuario autenticado, redirigiendo");
         router.push("/");
         return;
       }
       
       // Usar roleAsString para la comparación si está disponible, o role como fallback
       const userRole = user.roleAsString || user.role;
-      console.log("Rol del usuario:", userRole);
-      console.log("Roles permitidos:", allowedRoles);
-      console.log("¿Tiene acceso?:", allowedRoles.includes(userRole));
+      logger.debug("Verificación de roles", {
+        userRole,
+        allowedRoles,
+        hasAccess: allowedRoles.includes(userRole),
+      });
       
       if (!allowedRoles.includes(userRole)) {
-        console.log("Redireccionando a home por falta de permisos...");
+        logger.info("Redireccionando por falta de permisos", { userRole });
         router.push("/");
       }
     }

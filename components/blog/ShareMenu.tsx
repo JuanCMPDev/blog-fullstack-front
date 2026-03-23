@@ -3,6 +3,9 @@ import { Button } from "@/components/ui/button"
 import { Share2, MessageCircle, Linkedin, Copy, Check } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { createLogger } from "@/lib/logger"
+
+const logger = createLogger("ShareMenu")
 
 interface ShareMenuProps {
   url: string
@@ -111,12 +114,12 @@ export function ShareMenu({ url, title }: ShareMenuProps) {
         shareLink = `${socialNetwork.baseUrl}${encodeURIComponent(shareUrl)}&text=${encodeURIComponent(title)}`;
         break;
       default:
-        console.warn(`Red social no configurada: ${network}`);
+        logger.warn("Red social no configurada", { network });
         return;
     }
     
     // Registrar evento de compartir (se podría implementar análisis aquí)
-    console.log(`Compartiendo en ${network}: ${shareLink}`);
+    logger.debug("Compartiendo contenido", { network });
     
     // Abrir ventana para compartir
     window.open(shareLink, '_blank', 'width=600,height=400');

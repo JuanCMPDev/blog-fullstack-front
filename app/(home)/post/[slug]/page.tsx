@@ -19,6 +19,8 @@ import { SaveButton } from "@/components/blog/SaveButton"
 import type { Post, Comment } from "@/lib/types"
 import { useToast } from "@/hooks/use-toast"
 import { customFetch } from "@/lib/customFetch"
+import { buildApiUrl } from "@/lib/api"
+import { createLogger } from "@/lib/logger"
 import { getAvatarUrl } from "@/lib/utils"
 import { Prism as SyntaxHighlighter } from "react-syntax-highlighter"
 import { tomorrow } from "react-syntax-highlighter/dist/esm/styles/prism"
@@ -27,34 +29,20 @@ import { motion } from "framer-motion"
 import ReactMarkdown from "react-markdown"
 import remarkGfm from "remark-gfm"
 import { StructuredData } from "@/components/blog/StructuredData"
+import { ContentResolver } from "@/components/blog/ContentResolver"
+import { SeriesNavigationBar } from "@/components/blog/SeriesNavigation"
+import { markPostCompleted } from "@/hooks/use-course-progress"
+import { extractMarkdownFromHtml } from "@/lib/legacy-post-content"
+
+const logger = createLogger("PostPage")
+const ENABLE_LEGACY_BASE64_FALLBACK = process.env.NEXT_PUBLIC_ENABLE_LEGACY_BASE64_FALLBACK === 'true'
 
 // Componente dedicado para renderizar Markdown con SyntaxHighlighter para código
 const MarkdownRenderer = memo(({ content }: { content: string }) => {
-  console.log('MarkdownRenderer recibió:', content.substring(0, 100) + "...");
-  
-  // Verificar si el contenido incluye imágenes en base64
-  const hasBase64 = content.includes('data:image');
-  if (hasBase64) {
-    console.log('El contenido contiene imágenes en base64');
-  }
-  
-  useEffect(() => {
-    // Este efecto se ejecuta en el cliente después de renderizar
-    // Ayuda a verificar qué imágenes se están procesando
-    const images = document.querySelectorAll('.markdown-image');
-    console.log(`Se encontraron ${images.length} imágenes en el DOM después del renderizado`);
-    
-    // Verificar si hay imágenes en base64
-    images.forEach((img, index) => {
-      const src = (img as HTMLImageElement).src;
-      if (src.startsWith('data:image')) {
-        console.log(`Imagen ${index} es base64`);
-      }
-    });
-  }, [content]);
+  void content
   
   return (
-    <div className="prose prose-lg dark:prose-invert max-w-none mb-8">
+    <div className="prose prose-lg dark:prose-invert max-w-none mb-8 text-justify">
       <style jsx global>{`
         .prose h1 {
           font-size: 1.875rem;
@@ -174,23 +162,15 @@ const MarkdownRenderer = memo(({ content }: { content: string }) => {
           a: (props) => <a className="text-primary hover:underline" {...props} />,
           // Manejo personalizado de imágenes con mejor soporte para base64
           img: (props) => {
-            console.log('Renderizando imagen, src:', props.src ? (props.src.startsWith('data:image') ? 'Base64 image (truncated)' : props.src) : 'null');
-            
             // Verificar si el src está vacío o es null
             if (!props.src || props.src.trim() === '') {
-              console.warn('Se intentó renderizar una imagen con src vacío');
+              logger.warn('Se intentó renderizar una imagen con src vacío')
               return null; // No renderizar imágenes con src vacío
             }
             
-            // Limitar la longitud máxima de las URLs base64 para el log
-            const logSrc = props.src.startsWith('data:image') 
-              ? `${props.src.substring(0, 30)}...` 
-              : props.src;
-            
-            console.log(`Renderizando imagen con src: ${logSrc}`);
-            
             return (
               <div className="my-4">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img 
                   src={props.src} 
                   alt={props.alt || 'Imagen'} 
@@ -201,7 +181,7 @@ const MarkdownRenderer = memo(({ content }: { content: string }) => {
                   }}
                   loading="lazy"
                   onError={(e) => {
-                    console.error('Error al cargar la imagen:', e);
+                    logger.error('Error al cargar la imagen', e)
                     // Si hay error, añadir un marcador de error pero mantener el espacio
                     e.currentTarget.style.display = 'none';
                     const errorDiv = document.createElement('div');
@@ -248,14 +228,7 @@ export default function PostPage() {
       setIsLoading(true)
       try {
         const slugValue = Array.isArray(slug) ? slug[0] : slug
-        
-        // Asegurarse de que la URL no tenga barras duplicadas
-        let apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'
-        // Eliminar la barra final si existe
-        if (apiUrl.endsWith('/')) {
-          apiUrl = apiUrl.slice(0, -1)
-        }
-        const endpoint = `${apiUrl}/posts/slug/${slugValue}`
+        const endpoint = buildApiUrl(`posts/slug/${slugValue}`)
         
         const response = await customFetch(endpoint)
         
@@ -297,7 +270,7 @@ export default function PostPage() {
           tags: postData.tags?.map((tag: { name: string }) => tag.name) || []
         })
       } catch (error) {
-        console.error('Error al obtener el post:', error)
+        logger.error('Error al obtener el post', error)
         toast({
           title: "Error",
           description: "No se pudo cargar el post. Intente nuevamente.",
@@ -314,6 +287,13 @@ export default function PostPage() {
     }
   }, [slug, router, toast, user])
 
+  // Auto-mark post as completed if it belongs to a course
+  useEffect(() => {
+    if (post && post.courseId && user) {
+      markPostCompleted(post.id)
+    }
+  }, [post?.id, post?.courseId, user])
+
   const renderContent = (content: string) => {
     if (!content) return null;
     
@@ -321,10 +301,11 @@ export default function PostPage() {
     if (slug === "seguridad-informatica-una-necesidad-imperante-en-la-era-digital" || 
         slug === "seguridad-informatica" ||
         /seguridad-informatica/i.test(String(slug))) {
-      console.log('Renderizando contenido Markdown (forzado para post específico de seguridad informática)');
       
       // Si el contenido tiene etiquetas HTML, extraemos el contenido Markdown
-      const extractedContent = extractMarkdownFromHtml(content);
+      const extractedContent = extractMarkdownFromHtml(content, {
+        includeBase64Fallback: ENABLE_LEGACY_BASE64_FALLBACK,
+      });
       return <MarkdownRenderer content={extractedContent} />;
     }
     
@@ -351,21 +332,20 @@ export default function PostPage() {
     // Si el contenido está mezclado (HTML con Markdown), extraer y renderizar
     if (content.includes('<p>**') || content.includes('<p>#') || 
         (content.includes('<p>') && isMarkdownContent())) {
-      console.log('Renderizando contenido mezclado HTML/Markdown');
       
       // Extraer Markdown de HTML
-      const extractedContent = extractMarkdownFromHtml(content);
+      const extractedContent = extractMarkdownFromHtml(content, {
+        includeBase64Fallback: ENABLE_LEGACY_BASE64_FALLBACK,
+      });
       return <MarkdownRenderer content={extractedContent} />;
     }
     
     // Si es Markdown, usar el componente especializado
     if (isMarkdownContent()) {
-      console.log('Renderizando contenido Markdown');
       return <MarkdownRenderer content={content} />;
     }
     
     // Si no es Markdown, continuar con el procesamiento de HTML
-    console.log('Renderizando contenido HTML');
     
     // Procesar contenido de ReactQuill (HTML)
     const processCodeBlocks = () => {
@@ -483,7 +463,7 @@ export default function PostPage() {
     }
     
     return (
-      <div className="prose prose-lg dark:prose-invert max-w-none mb-8">
+      <div className="prose prose-lg dark:prose-invert max-w-none mb-8 text-justify">
         <style jsx global>{`
           /* Estilos globales para imágenes en contenido HTML */
           .prose img {
@@ -507,199 +487,6 @@ export default function PostPage() {
     );
   };
 
-  // Función para extraer imágenes del HTML usando regex
-  function extractImages(htmlContent: string): { imagesMarkdown: string, positionMap: Record<string, string> } {
-    const images: { marker: string, markdown: string }[] = [];
-    const positionMap: Record<string, string> = {};
-    let counter = 0;
-    
-    // Buscar imágenes con atributo alt
-    const imgRegexWithAlt = /<img[^>]+src="([^"]+)"[^>]*alt="([^"]+)"[^>]*>/g;
-    let imgMatch;
-    while ((imgMatch = imgRegexWithAlt.exec(htmlContent)) !== null) {
-      const src = imgMatch[1];
-      const alt = imgMatch[2];
-      
-      if (!src || src.trim() === '') {
-        console.log('Imagen encontrada con src vacío');
-        continue;
-      }
-      
-      const isBase64 = src.startsWith('data:image');
-      console.log(`Procesando imagen ${counter}: ${isBase64 ? 'base64' : src}`);
-      
-      const marker = `__IMG_MARKER_${counter}__`;
-      const markdownImg = `![${alt}](${src})`;
-      
-      images.push({ marker, markdown: markdownImg });
-      positionMap[imgMatch[0]] = marker;
-      counter++;
-    }
-    
-    // Buscar imágenes sin atributo alt
-    const imgRegexWithoutAlt = /<img[^>]+src="([^"]+)"[^>]*(?!alt=)[^>]*>/g;
-    while ((imgMatch = imgRegexWithoutAlt.exec(htmlContent)) !== null) {
-      const src = imgMatch[1];
-      
-      if (!src || src.trim() === '') {
-        console.log('Imagen encontrada con src vacío');
-        continue;
-      }
-      
-      // Verificar que no hayamos procesado ya esta img (para evitar duplicados)
-      if (Object.keys(positionMap).includes(imgMatch[0])) {
-        continue;
-      }
-      
-      const isBase64 = src.startsWith('data:image');
-      console.log(`Procesando imagen ${counter}: ${isBase64 ? 'base64' : src}`);
-      
-      const marker = `__IMG_MARKER_${counter}__`;
-      const markdownImg = `![Imagen](${src})`;
-      
-      images.push({ marker, markdown: markdownImg });
-      positionMap[imgMatch[0]] = marker;
-      counter++;
-    }
-    
-    // Buscar específicamente la imagen base64 que sabemos que existe
-    const specificBase64Start = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAA';
-    if (htmlContent.includes(specificBase64Start) && images.length === 0) {
-      console.log('Encontrada la imagen base64 específica usando búsqueda directa');
-      
-      // Obtener la URL base64 completa
-      const base64StartIndex = htmlContent.indexOf(specificBase64Start);
-      // Buscar el cierre de comillas después del inicio del base64
-      let endIndex = htmlContent.indexOf('"', base64StartIndex);
-      if (endIndex === -1) {
-        // Si no hay comillas, buscar el cierre de comilla simple
-        endIndex = htmlContent.indexOf("'", base64StartIndex);
-      }
-      
-      if (endIndex !== -1) {
-        const base64Url = htmlContent.substring(base64StartIndex, endIndex);
-        const marker = `__IMG_MARKER_${counter}__`;
-        const markdownImg = `![Imagen Base64](${base64Url})`;
-        
-        images.push({ marker, markdown: markdownImg });
-        // Crear un marcador para esta imagen
-        const fakeTag = `<img src="${base64Url}" alt="Base64 Image">`;
-        positionMap[fakeTag] = marker;
-        
-        // Reemplazar la URL base64 real con el marcador en el HTML
-        htmlContent = htmlContent.replace(base64Url, marker);
-        counter++;
-      }
-    }
-    
-    // Crear cadena de texto con todas las imágenes en formato Markdown
-    const imagesMarkdown = images.map(img => img.markdown).join('\n\n');
-    
-    console.log(`Se encontraron ${images.length} imágenes`);
-    return { imagesMarkdown, positionMap };
-  }
-
-  // Función para extraer texto limpio del HTML
-  function extractText(htmlContent: string, positionMap: Record<string, string>): string {
-    let content = htmlContent;
-    
-    // Reemplazar las etiquetas de imagen con sus marcadores
-    Object.entries(positionMap).forEach(([imgTag, marker]) => {
-      content = content.replace(imgTag, marker);
-    });
-    
-    // Convertir párrafos HTML en líneas de texto (usando gi en lugar de gs)
-    content = content.replace(/<p[^>]*>([\s\S]*?)<\/p>/gi, '$1\n\n');
-    
-    // Convertir encabezados HTML en formato Markdown (usando gi en lugar de gs)
-    content = content.replace(/<h1[^>]*>([\s\S]*?)<\/h1>/gi, '# $1\n\n');
-    content = content.replace(/<h2[^>]*>([\s\S]*?)<\/h2>/gi, '## $1\n\n');
-    content = content.replace(/<h3[^>]*>([\s\S]*?)<\/h3>/gi, '### $1\n\n');
-    content = content.replace(/<h4[^>]*>([\s\S]*?)<\/h4>/gi, '#### $1\n\n');
-    
-    // Convertir listas HTML en formato Markdown (usando gi en lugar de gs)
-    content = content.replace(/<ul[^>]*>([\s\S]*?)<\/ul>/gi, '$1\n\n');
-    content = content.replace(/<ol[^>]*>([\s\S]*?)<\/ol>/gi, '$1\n\n');
-    content = content.replace(/<li[^>]*>([\s\S]*?)<\/li>/gi, '* $1\n');
-    
-    // Convertir formato de texto (usando gi en lugar de gs)
-    content = content.replace(/<strong[^>]*>([\s\S]*?)<\/strong>/gi, '**$1**');
-    content = content.replace(/<b[^>]*>([\s\S]*?)<\/b>/gi, '**$1**');
-    content = content.replace(/<em[^>]*>([\s\S]*?)<\/em>/gi, '*$1*');
-    content = content.replace(/<i[^>]*>([\s\S]*?)<\/i>/gi, '*$1*');
-    
-    // Convertir enlaces HTML en formato Markdown (usando gi en lugar de gs)
-    content = content.replace(/<a[^>]+href="([^"]+)"[^>]*>([\s\S]*?)<\/a>/gi, '[$2]($1)');
-    
-    // Eliminar todas las demás etiquetas HTML
-    content = content.replace(/<[^>]+>/g, '');
-    
-    // Decodificar entidades HTML
-    content = content.replace(/&nbsp;/g, ' ');
-    content = content.replace(/&amp;/g, '&');
-    content = content.replace(/&lt;/g, '<');
-    content = content.replace(/&gt;/g, '>');
-    content = content.replace(/&quot;/g, '"');
-    content = content.replace(/&#39;/g, "'");
-    
-    // Buscar marcadores de posición y restaurar el orden original
-    Object.values(positionMap).forEach(marker => {
-      if (content.includes(marker)) {
-        // El marcador ya está en el contenido, lo dejamos ahí
-      } else {
-        // Si el marcador no está en el contenido, lo agregamos al final
-        content += `\n\n${marker}`;
-      }
-    });
-    
-    // Eliminar líneas vacías múltiples
-    content = content.replace(/\n{3,}/g, '\n\n');
-    
-    return content;
-  }
-
-  function extractMarkdownFromHtml(htmlContent: string): string {
-    console.log('Extrayendo Markdown de HTML, longitud del contenido:', htmlContent.length);
-    
-    // Extraer imágenes y obtener sus marcadores de posición
-    const { imagesMarkdown, positionMap } = extractImages(htmlContent);
-    
-    // Extraer texto limpio y reemplazar marcadores con el contenido real
-    let textContent = extractText(htmlContent, positionMap);
-    
-    // Reemplazar los marcadores con las imágenes en formato Markdown
-    Object.values(positionMap).forEach((marker, index) => {
-      const imageMarkdown = imagesMarkdown.split('\n\n')[index];
-      if (imageMarkdown) {
-        textContent = textContent.replace(marker, imageMarkdown);
-      }
-    });
-    
-    // Verificar si hay una imagen base64 específica que sabemos que existe
-    const specificBase64Start = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAA';
-    if (htmlContent.includes(specificBase64Start) && !textContent.includes(specificBase64Start)) {
-      console.log('La imagen base64 específica no se incluyó correctamente, añadiéndola manualmente');
-      
-      // Obtener la URL base64 completa
-      const base64StartIndex = htmlContent.indexOf(specificBase64Start);
-      // Buscar el cierre de comillas después del inicio del base64
-      let endIndex = htmlContent.indexOf('"', base64StartIndex);
-      if (endIndex === -1) {
-        // Si no hay comillas, buscar el cierre de comilla simple
-        endIndex = htmlContent.indexOf("'", base64StartIndex);
-      }
-      
-      if (endIndex !== -1) {
-        const base64Url = htmlContent.substring(base64StartIndex, endIndex);
-        // Añadir la imagen base64 al final del contenido
-        textContent += `\n\n![Imagen Base64](${base64Url})`;
-      }
-    }
-    
-    console.log('Markdown generado, longitud:', textContent.length);
-    return textContent;
-  }
-
   const scrollToComments = () => {
     if (commentsRef.current) {
       commentsRef.current.scrollIntoView({ behavior: "smooth" })
@@ -721,7 +508,7 @@ export default function PostPage() {
           const formattedDate = format(new Date(post.publishDate), "d 'de' MMMM 'de' yyyy", { locale: es });
           message = `Este post está programado para publicarse el ${formattedDate}`;
         } catch (error) {
-          console.error("Error al formatear la fecha de publicación:", error);
+          logger.error("Error al formatear la fecha de publicación", error)
           message = "Este post está programado para publicarse en una fecha futura";
         }
       } else {
@@ -881,7 +668,12 @@ export default function PostPage() {
                 <Tag key={index} name={tag} />
               ))}
             </div>
-            {renderContent(post.content)}
+            <SeriesNavigationBar postId={post.id} />
+            <ContentResolver
+              content={post.content}
+              contentV2={post.contentV2}
+              renderLegacy={renderContent}
+            />
             <div className="flex items-center justify-between border-t border-b py-4 mb-8 bg-background/90">
               <div className="flex items-center space-x-2 sm:space-x-4">
                 <LikeButton 

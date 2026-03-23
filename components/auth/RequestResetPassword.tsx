@@ -10,6 +10,8 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { Input } from "@/components/ui/input"
 import { useToast } from "@/hooks/use-toast"
 import { useReCaptcha } from '@/components/common/RecaptchaProvider'
+import { customFetch } from "@/lib/customFetch"
+import { buildApiUrl, extractApiErrorMessageFromResponse } from "@/lib/api"
 
 const emailSchema = z.object({
   email: z.string().email({
@@ -41,7 +43,7 @@ export function RequestResetPassword() {
       }
       
       // Simulate API call
-      const response = await fetch(process.env.NEXT_PUBLIC_API_URL + "auth/request-password-reset", {
+      const response = await customFetch(buildApiUrl("auth/request-password-reset"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ 
@@ -61,7 +63,8 @@ export function RequestResetPassword() {
           throw new Error("Respuesta inesperada del servidor")
         }
       } else {
-        throw new Error("Error al enviar el correo de recuperación")
+        const message = await extractApiErrorMessageFromResponse(response, "Error al enviar el correo de recuperación")
+        throw new Error(message)
       }
     } catch (error: unknown) {
       toast({

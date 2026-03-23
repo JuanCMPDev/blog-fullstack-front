@@ -3,10 +3,12 @@ import { useToast } from "@/hooks/use-toast";
 import { customFetch } from "@/lib/customFetch";
 import { useAuth } from "@/lib/auth";
 import type { Comment } from "@/lib/types";
+import { buildCommentLikeEndpoint, getLikeHttpMethod } from "@/lib/resource-endpoints";
 
 interface UseCommentInteractionsProps {
   postId: number | null;
-  getBaseApiUrl: () => string;
+  comments: Comment[];
+  buildApiUrl: (path: string) => string;
   updateCommentRecursively: (comments: Comment[], commentId: string, updateFn: (comment: Comment) => Comment) => Comment[];
   removeCommentRecursively: (comments: Comment[], commentId: string) => Comment[];
   setComments: React.Dispatch<React.SetStateAction<Comment[]>>;
@@ -20,7 +22,8 @@ interface UseCommentInteractionsProps {
  */
 export function useCommentInteractions({
   postId,
-  getBaseApiUrl,
+  comments,
+  buildApiUrl,
   updateCommentRecursively,
   removeCommentRecursively,
   setComments,
@@ -51,9 +54,10 @@ export function useCommentInteractions({
     }
   
     // Asegurar que el autor sea un objeto válido
-    const author = comment.author && typeof comment.author === 'object' 
+    const author = comment.author && typeof comment.author === 'object'
       ? {
           id: comment.author.id || 'unknown',
+          nick: comment.author.nick,
           name: comment.author.name || 'Usuario',
           avatar: comment.author.avatar || ''
         }
@@ -90,49 +94,65 @@ export function useCommentInteractions({
     }
 
     try {
-      const apiUrl = getBaseApiUrl();
-      const response = await customFetch(`${apiUrl}/likes/comment`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ commentId }),
+      const currentCommentFinder = (commentsList: Comment[], id: string): Comment | null => {
+        for (const comment of commentsList) {
+          if (comment.id === id) {
+            return comment;
+          }
+          if (comment.replies.length > 0) {
+            const found = currentCommentFinder(comment.replies, id);
+            if (found) {
+              return found;
+            }
+          }
+        }
+        return null;
+      };
+
+      const currentComment = currentCommentFinder(comments, commentId);
+
+      const wasLiked = Boolean(currentComment?.hasLiked);
+      const currentLikes = typeof currentComment?.likes === 'number' ? currentComment.likes : 0;
+
+      const response = await customFetch(buildCommentLikeEndpoint(commentId), {
+        method: getLikeHttpMethod(wasLiked),
       });
       
       if (!response.ok) {
         throw new Error(`Error al procesar like: ${response.statusText}`);
       }
       
-      const responseJson = await response.json();
-      
-      // Extraer solo los valores que necesitamos de la respuesta
-      let likesCount = 0;
-      let liked = false;
-      
-      // Verificar qué estructura tiene la respuesta
-      if (responseJson && typeof responseJson === 'object') {
-        // Estructura de respuesta directa: { liked: boolean, likesCount: number }
-        if (typeof responseJson.likesCount === 'number') {
-          likesCount = responseJson.likesCount;
-        } else if (typeof responseJson.count === 'number') {
-          likesCount = responseJson.count;
-        }
-        
-        if (typeof responseJson.liked === 'boolean') {
-          liked = responseJson.liked;
-        }
-        
-        // Estructura con data: { data: { liked: boolean, likesCount: number } }
-        if (responseJson.data && typeof responseJson.data === 'object') {
-          if (typeof responseJson.data.likesCount === 'number') {
-            likesCount = responseJson.data.likesCount;
-          } else if (typeof responseJson.data.count === 'number') {
-            likesCount = responseJson.data.count;
+      let liked = !wasLiked;
+      let likesCount = Math.max(0, currentLikes + (liked ? 1 : -1));
+
+      if (response.status !== 204) {
+        try {
+          const responseJson = await response.json();
+          if (responseJson && typeof responseJson === 'object') {
+            if (typeof responseJson.likesCount === 'number') {
+              likesCount = responseJson.likesCount;
+            } else if (typeof responseJson.count === 'number') {
+              likesCount = responseJson.count;
+            }
+            
+            if (typeof responseJson.liked === 'boolean') {
+              liked = responseJson.liked;
+            }
+            
+            if (responseJson.data && typeof responseJson.data === 'object') {
+              if (typeof responseJson.data.likesCount === 'number') {
+                likesCount = responseJson.data.likesCount;
+              } else if (typeof responseJson.data.count === 'number') {
+                likesCount = responseJson.data.count;
+              }
+              
+              if (typeof responseJson.data.liked === 'boolean') {
+                liked = responseJson.data.liked;
+              }
+            }
           }
-          
-          if (typeof responseJson.data.liked === 'boolean') {
-            liked = responseJson.data.liked;
-          }
+        } catch {
+          // Sin JSON de respuesta, conservamos cálculo local
         }
       }
       
@@ -152,7 +172,7 @@ export function useCommentInteractions({
         variant: "destructive",
       });
     }
-  }, [user, getBaseApiUrl, toast, setComments, updateCommentRecursively]);
+  }, [user, toast, setComments, updateCommentRecursively, comments]);
 
   // Responder a un comentario
   const handleReply = useCallback((commentId: string) => {
@@ -177,8 +197,7 @@ export function useCommentInteractions({
     setIsLoading(true);
 
     try {
-      const apiUrl = getBaseApiUrl();
-      const response = await customFetch(`${apiUrl}/comments`, {
+      const response = await customFetch(buildApiUrl("comments"), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -222,20 +241,14 @@ export function useCommentInteractions({
           if (source.author && typeof source.author === 'object') {
             replyData.author = {
               id: source.author.id || 'unknown',
+              nick: source.author.nick || user?.nick,
               name: source.author.name || 'Usuario',
               avatar: source.author.avatar || ''
             };
-          } else if (source.authorId && user) {
-            // Si solo tenemos authorId pero conocemos al usuario
-            replyData.author = {
-              id: user.userId,
-              name: user.name,
-              avatar: user.avatar || ''
-            };
           } else if (user) {
-            // Usar la información del usuario actual como fallback
             replyData.author = {
               id: user.userId,
+              nick: user.nick,
               name: user.name,
               avatar: user.avatar || ''
             };
@@ -280,7 +293,7 @@ export function useCommentInteractions({
     } finally {
       setIsLoading(false);
     }
-  }, [user, postId, getBaseApiUrl, toast, setComments, setReplyingTo, setReplyContent, setIsLoading, updateCommentRecursively, ensureCommentStructure]);
+  }, [user, postId, buildApiUrl, toast, setComments, setReplyingTo, setReplyContent, setIsLoading, updateCommentRecursively, ensureCommentStructure]);
 
   // Añadir un nuevo comentario principal
   const addNewComment = useCallback(async (newCommentContent: string) => {
@@ -291,8 +304,7 @@ export function useCommentInteractions({
     setIsLoading(true);
 
     try {
-      const apiUrl = getBaseApiUrl();
-      const response = await customFetch(`${apiUrl}/comments`, {
+      const response = await customFetch(buildApiUrl("comments"), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -335,20 +347,14 @@ export function useCommentInteractions({
           if (source.author && typeof source.author === 'object') {
             newCommentData.author = {
               id: source.author.id || 'unknown',
+              nick: source.author.nick || user?.nick,
               name: source.author.name || 'Usuario',
               avatar: source.author.avatar || ''
             };
-          } else if (source.authorId && user) {
-            // Si solo tenemos authorId pero conocemos al usuario
-            newCommentData.author = {
-              id: user.userId,
-              name: user.name,
-              avatar: user.avatar || ''
-            };
           } else if (user) {
-            // Usar la información del usuario actual como fallback
             newCommentData.author = {
               id: user.userId,
+              nick: user.nick,
               name: user.name,
               avatar: user.avatar || ''
             };
@@ -387,15 +393,14 @@ export function useCommentInteractions({
     } finally {
       setIsLoading(false);
     }
-  }, [user, postId, getBaseApiUrl, toast, setComments, setIsLoading, ensureCommentStructure]);
+  }, [user, postId, buildApiUrl, toast, setComments, setIsLoading, ensureCommentStructure]);
 
   // Eliminar un comentario
   const deleteComment = useCallback(async (commentId: string) => {
     if (!user) return;
 
     try {
-      const apiUrl = getBaseApiUrl();
-      const response = await customFetch(`${apiUrl}/comments/${commentId}`, {
+      const response = await customFetch(buildApiUrl(`comments/${commentId}`), {
         method: 'DELETE',
       });
       
@@ -418,7 +423,7 @@ export function useCommentInteractions({
         variant: "destructive",
       });
     }
-  }, [user, getBaseApiUrl, toast, setComments, removeCommentRecursively]);
+  }, [user, buildApiUrl, toast, setComments, removeCommentRecursively]);
 
   return {
     handleLike,

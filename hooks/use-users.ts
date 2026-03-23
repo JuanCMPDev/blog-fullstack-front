@@ -1,5 +1,7 @@
 import { useState, useCallback, useEffect } from "react"
 import { customFetch } from "@/lib/customFetch"
+import { buildApiUrl } from "@/lib/api"
+import { buildUserStatusEndpoint, buildUserStatusPayload } from "@/lib/resource-endpoints"
 
 // Actualizamos la interfaz User para que coincida con el backend
 export interface User {
@@ -37,7 +39,7 @@ export function useUsers(usersPerPage = 10) {
     setIsLoading(true)
     try {
       // Construimos la URL con los parámetros de paginación y búsqueda
-      const url = new URL('/users', process.env.NEXT_PUBLIC_API_URL);
+      const url = new URL(buildApiUrl("users"));
       url.searchParams.append('page', currentPage.toString());
       url.searchParams.append('limit', usersPerPage.toString());
       
@@ -71,8 +73,12 @@ export function useUsers(usersPerPage = 10) {
   // Función para banear a un usuario
   const banUser = useCallback(async (userId: string) => {
     try {
-      const response = await customFetch(`${process.env.NEXT_PUBLIC_API_URL}users/${userId}/ban`, {
-        method: 'POST',
+      const response = await customFetch(buildUserStatusEndpoint(userId), {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(buildUserStatusPayload(true)),
       });
       
       if (response.ok) {
@@ -94,8 +100,12 @@ export function useUsers(usersPerPage = 10) {
   // Función para desbanear a un usuario
   const unbanUser = useCallback(async (userId: string) => {
     try {
-      const response = await customFetch(`${process.env.NEXT_PUBLIC_API_URL}users/${userId}/unban`, {
-        method: 'POST',
+      const response = await customFetch(buildUserStatusEndpoint(userId), {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(buildUserStatusPayload(false)),
       });
       
       if (response.ok) {
@@ -143,7 +153,7 @@ export function useUsers(usersPerPage = 10) {
   // Función para cambiar el rol de un usuario
   const changeRole = useCallback(async (userId: string, newRole: "USER" | "EDITOR") => {
     try {
-      const response = await customFetch(`${process.env.NEXT_PUBLIC_API_URL}users/${userId}/role`, {
+      const response = await customFetch(`users/${userId}/role`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',

@@ -25,7 +25,6 @@ export function AvatarEdit({ currentAvatar, onAvatarChange, handleAvatarUpdate }
 
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0]
-    console.log(file)
     if (file) {
       setNewAvatar(URL.createObjectURL(file)) // Para previsualización
       onAvatarChange(file) // Pasar el archivo al padre

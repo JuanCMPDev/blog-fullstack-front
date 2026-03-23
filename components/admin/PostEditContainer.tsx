@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from "react"
+import React, { useState, useCallback, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { usePost } from "@/hooks/use-posts"
 import type { Post } from "@/lib/types"
@@ -31,29 +31,46 @@ export function PostEditContainer({ postId, render }: PostEditContainerProps) {
   const [imagePreview, setImagePreview] = useState<string | null>(null)
   const [imageWasRemoved, setImageWasRemoved] = useState(false)
 
+  useEffect(() => {
+    return () => {
+      if (imagePreview?.startsWith('blob:')) {
+        URL.revokeObjectURL(imagePreview)
+      }
+    }
+  }, [imagePreview])
+
   const handleImageChange = useCallback((file: File | null) => {
     if (file) {
       setSelectedImage(file)
       setImageWasRemoved(false)
-      
-      // Crear una URL para previsualizar la imagen
-      const reader = new FileReader()
-      reader.onloadend = () => {
-        setImagePreview(reader.result as string)
+
+      if (imagePreview?.startsWith('blob:')) {
+        URL.revokeObjectURL(imagePreview)
       }
-      reader.readAsDataURL(file)
+
+      setImagePreview(URL.createObjectURL(file))
     } else {
       setSelectedImage(null)
+
+      if (imagePreview?.startsWith('blob:')) {
+        URL.revokeObjectURL(imagePreview)
+      }
+
       setImagePreview(null)
       setImageWasRemoved(true)
     }
-  }, [])
+  }, [imagePreview])
 
   const handleImageRemove = useCallback(() => {
     setSelectedImage(null)
+
+    if (imagePreview?.startsWith('blob:')) {
+      URL.revokeObjectURL(imagePreview)
+    }
+
     setImagePreview(null)
     setImageWasRemoved(true)
-  }, [])
+  }, [imagePreview])
 
   const handleSubmit = useCallback(async (updatedPost: Partial<Post>) => {
     if (!post) return

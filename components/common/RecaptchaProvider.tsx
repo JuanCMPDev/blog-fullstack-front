@@ -36,22 +36,30 @@ export const ReCaptchaProvider = ({ reCaptchaKey, children }: ReCaptchaProviderP
       script.src = `https://www.google.com/recaptcha/api.js?render=${reCaptchaKey}`
       script.async = true
       script.defer = true
-      
+
       script.onload = () => {
         window.grecaptcha.ready(() => {
           setLoaded(true)
         })
       }
-      
+
       document.head.appendChild(script)
     } else if (window.grecaptcha) {
       window.grecaptcha.ready(() => {
         setLoaded(true)
       })
     }
-    
+
     return () => {
-      // Limpieza opcional si es necesario
+      // Limpiar el script y el badge al desmontar el provider
+      setLoaded(false)
+      const script = document.querySelector(`script[src*="recaptcha"]`)
+      if (script) script.remove()
+      // Eliminar el badge flotante que Google inyecta
+      const badge = document.querySelector('.grecaptcha-badge')
+      if (badge) (badge as HTMLElement).remove()
+      // Eliminar los iframes de recaptcha
+      document.querySelectorAll('iframe[src*="recaptcha"]').forEach((el) => el.remove())
     }
   }, [reCaptchaKey])
 

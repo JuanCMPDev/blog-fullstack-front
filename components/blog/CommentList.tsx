@@ -9,39 +9,41 @@ import { ensureCommentStructure } from "@/utils/comment-utils"
 
 interface CommentListProps {
   comments: Comment[]
-  isLoading: boolean
+  isListLoading: boolean
+  isSubmittingReply: boolean
   replyingTo: string | null
   replyContent: string
+  replyFeedback?: string | null
   onReplyContentChange: (content: string) => void
   onReply: (id: string) => void
   onLike: (id: string) => Promise<void>
   onDelete: (id: string) => Promise<void>
+  onEdit: (id: string, newContent: string) => Promise<void>
   onSubmitReply: () => Promise<void>
   onCancelReply: () => void
 }
 
 const CommentList: React.FC<CommentListProps> = ({
   comments,
-  isLoading,
+  isListLoading,
+  isSubmittingReply,
   replyingTo,
   replyContent,
+  replyFeedback,
   onReplyContentChange,
   onReply,
   onLike,
   onDelete,
+  onEdit,
   onSubmitReply,
   onCancelReply,
 }) => {
-  const [isSubmittingReply, setIsSubmittingReply] = useState(false)
   const [processedComments, setProcessedComments] = useState<Comment[]>([])
 
   // Procesar los comentarios cuando cambian
   useEffect(() => {
     // Asegurar que todos los comentarios tengan la estructura correcta
     const safeComments = Array.isArray(comments) ? comments.map(ensureCommentStructure) : []
-
-    // Depuración para verificar cómo están llegando los comentarios y sus respuestas
-    console.log("[DEBUG] CommentList recibió comments:", comments)
 
     // Contar cuántas respuestas hay en total en la estructura anidada
     const countReplies = (cmts: Comment[]): number => {
@@ -55,23 +57,16 @@ const CommentList: React.FC<CommentListProps> = ({
     }
 
     const totalReplies = countReplies(safeComments)
-    console.log(
-      `[DEBUG] CommentList: ${safeComments.length} comentarios principales con ${totalReplies} respuestas anidadas`,
-    )
+    void totalReplies
 
     setProcessedComments(safeComments)
   }, [comments])
 
   const handleSubmitReply = async () => {
-    setIsSubmittingReply(true)
-    try {
-      await onSubmitReply()
-    } finally {
-      setIsSubmittingReply(false)
-    }
+    await onSubmitReply()
   }
 
-  if (isLoading && processedComments.length === 0) {
+  if (isListLoading && processedComments.length === 0) {
     return (
       <div className="flex justify-center my-8">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -79,7 +74,7 @@ const CommentList: React.FC<CommentListProps> = ({
     )
   }
 
-  if (processedComments.length === 0 && !isLoading) {
+  if (processedComments.length === 0 && !isListLoading) {
     return (
       <div className="text-center py-8 text-muted-foreground">
         <p>No hay comentarios aún. ¡Sé el primero en comentar!</p>
@@ -88,7 +83,7 @@ const CommentList: React.FC<CommentListProps> = ({
   }
 
   return (
-    <div className="comments-container">
+    <div className="comments-container space-y-3 sm:space-y-4">
       {processedComments.map((comment) => (
         <CommentItem
           key={comment.id}
@@ -96,8 +91,10 @@ const CommentList: React.FC<CommentListProps> = ({
           onReply={onReply}
           onLike={onLike}
           onDelete={onDelete}
+          onEdit={onEdit}
           replyingTo={replyingTo}
           replyContent={replyContent}
+          replyFeedback={replyFeedback}
           onReplyContentChange={onReplyContentChange}
           onSubmitReply={handleSubmitReply}
           onCancelReply={onCancelReply}

@@ -4,6 +4,10 @@ import { ReactNode, useEffect, useCallback } from "react";
 import { useAuth } from "@/lib/auth";
 import { customFetch } from "@/lib/customFetch";
 import { UserRole } from "@/lib/types";
+import { buildApiUrl } from "@/lib/api";
+import { createLogger } from "@/lib/logger";
+
+const logger = createLogger("AuthProvider")
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const refreshAccessToken = useAuth((state) => state.refreshAccessToken);
@@ -19,7 +23,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       // Usar el endpoint específico para estado del usuario que incluye info de ban y rol
       const response = await customFetch(
-        `${process.env.NEXT_PUBLIC_API_URL}auth/user-status`,
+        buildApiUrl("auth/user-status"),
         {
           method: "GET",
           headers: {
@@ -32,7 +36,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (!response.ok) {
         // Si hay algún problema con la autenticación, cerramos sesión
         if (response.status === 401 || response.status === 403) {
-          console.log("Sesión inválida, cerrando sesión...");
+          logger.info("Sesión inválida, cerrando sesión");
           logout();
         }
         return;
@@ -42,15 +46,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       
       // Verificar si el usuario está baneado
       if (userData.isBanned) {
-        console.log("Usuario baneado, cerrando sesión...");
+        logger.info("Usuario baneado, cerrando sesión");
         logout();
         return;
       }
       
       // Verificar si hay diferencias en el rol
       if (userData.roleAsString !== user.roleAsString) {
-        console.log("Cambios detectados en el rol del usuario, actualizando...");
-        console.log("Rol actual:", user.roleAsString, "Nuevo rol:", userData.roleAsString);
+        logger.info("Cambios detectados en el rol del usuario", {
+          currentRole: user.roleAsString,
+          newRole: userData.roleAsString,
+        });
         
         // Convertir roleAsString a enum UserRole para mantener el tipado
         const roleEnum = 
@@ -79,7 +85,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (accessToken) {
         refreshAccessToken();
       }
-    }, 15 * 60 * 1000); // 15 minutos
+    }, 10 * 60 * 1000); // 10 minutos (antes de que expire el access token de 15m)
     
     // Verificar el estado del usuario cada 5 minutos
     const userStatusInterval = setInterval(() => {

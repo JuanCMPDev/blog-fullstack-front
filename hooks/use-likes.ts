@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from "react";
 import { useAuth } from "@/lib/auth";
 import { useToast } from "@/hooks/use-toast";
 import { customFetch } from "@/lib/customFetch";
+import { buildPostLikeEndpoint, getLikeHttpMethod } from "@/lib/resource-endpoints";
 
 interface UseLikesReturn {
   hasLiked: boolean;
@@ -22,42 +23,10 @@ export function useLikes({ postId, initialLikesCount }: UseLikesProps): UseLikes
   const { user } = useAuth();
   const { toast } = useToast();
 
-  // Función para obtener la URL base de la API
-  const getBaseApiUrl = useCallback(() => {
-    let apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
-    // Eliminar la barra final si existe
-    if (apiUrl.endsWith('/')) {
-      apiUrl = apiUrl.slice(0, -1);
-    }
-    return apiUrl;
-  }, []);
-
-  // Verificar el estado del like actual
-  const checkLikeStatus = useCallback(async () => {
-    if (!postId || !user) {
-      setHasLiked(false);
-      return;
-    }
-    
-    try {
-      const apiUrl = getBaseApiUrl();
-      const response = await customFetch(`${apiUrl}/likes/post/${postId}/check`);
-      
-      if (response.ok) {
-        const data = await response.json();
-        setHasLiked(data.liked);
-        setLikesCount(data.likesCount);
-      }
-    } catch (error) {
-      console.error('Error al verificar el estado del like:', error);
-      setHasLiked(false);
-    }
-  }, [postId, user, getBaseApiUrl]);
-
-  // Comprobar el estado del like al cargar el componente
+  // Inicializar contador de likes desde props
   useEffect(() => {
-    checkLikeStatus();
-  }, [checkLikeStatus]);
+    setLikesCount(initialLikesCount);
+  }, [initialLikesCount]);
 
   // Función para dar/quitar like
   const toggleLike = useCallback(async () => {
@@ -75,28 +44,40 @@ export function useLikes({ postId, initialLikesCount }: UseLikesProps): UseLikes
     setIsLoading(true);
     
     try {
-      const apiUrl = getBaseApiUrl();
-      const response = await customFetch(`${apiUrl}/likes/post`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ postId }),
+      const wasLiked = hasLiked;
+      const response = await customFetch(buildPostLikeEndpoint(postId), {
+        method: getLikeHttpMethod(wasLiked),
       });
       
       if (!response.ok) {
         throw new Error(`Error en la petición: ${response.statusText}`);
       }
-      
-      const data = await response.json();
-      
-      // Actualizar el estado local
-      setHasLiked(data.liked);
-      setLikesCount(data.likesCount);
+
+      let nextLiked = !wasLiked;
+      let nextLikesCount = Math.max(0, likesCount + (nextLiked ? 1 : -1));
+
+      if (response.status !== 204) {
+        try {
+          const data = await response.json();
+          if (typeof data?.liked === 'boolean') {
+            nextLiked = data.liked;
+          }
+          if (typeof data?.likesCount === 'number') {
+            nextLikesCount = data.likesCount;
+          } else if (typeof data?.count === 'number') {
+            nextLikesCount = data.count;
+          }
+        } catch {
+          // Si no hay body JSON, conservamos cálculo local
+        }
+      }
+
+      setHasLiked(nextLiked);
+      setLikesCount(nextLikesCount);
       
       toast({
-        title: data.liked ? "Like agregado" : "Like eliminado",
-        description: data.liked ? "Has dado like a este post" : "Has quitado tu like de este post",
+        title: nextLiked ? "Like agregado" : "Like eliminado",
+        description: nextLiked ? "Has dado like a este post" : "Has quitado tu like de este post",
       });
     } catch (error) {
       console.error('Error al dar like:', error);
@@ -108,7 +89,7 @@ export function useLikes({ postId, initialLikesCount }: UseLikesProps): UseLikes
     } finally {
       setIsLoading(false);
     }
-  }, [postId, user, toast, getBaseApiUrl]);
+  }, [postId, user, toast, hasLiked, likesCount]);
 
   return {
     hasLiked,

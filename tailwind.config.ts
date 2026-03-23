@@ -9,6 +9,10 @@ export default {
   ],
   theme: {
   	extend: {
+  		fontFamily: {
+  			sans: ['var(--font-inter)', 'Inter', 'system-ui', 'sans-serif'],
+  			headline: ['var(--font-manrope)', 'Manrope', 'system-ui', 'sans-serif'],
+  		},
   		colors: {
   			background: 'hsl(var(--background))',
   			foreground: 'hsl(var(--foreground))',
@@ -52,9 +56,9 @@ export default {
   			}
   		},
   		borderRadius: {
-  			lg: 'var(--radius)',
-  			md: 'calc(var(--radius) - 2px)',
-  			sm: 'calc(var(--radius) - 4px)'
+  			lg: '0.75rem',
+  			md: '0.5rem',
+  			sm: '0.375rem'
   		},
 		  typography: {
 			DEFAULT: {

@@ -95,10 +95,8 @@ export function UsersTable() {
     }
 
     const success = await changeRole(userId, newRole);
-    
-    if (success) {
-      console.log(`Rol de usuario cambiado a ${newRole} exitosamente`);
-    } else {
+
+    if (!success) {
       console.error("No se pudo cambiar el rol del usuario");
     }
   }

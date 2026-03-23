@@ -1,12 +1,11 @@
 import { MetadataRoute } from 'next'
+import { buildApiUrl } from '@/lib/api'
 
-// API URL
-const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'
 const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://technoespacio.com'
 
 async function getPosts() {
   try {
-    const response = await fetch(`${baseUrl}/posts/sitemap`, { next: { revalidate: 3600 } })
+    const response = await fetch(buildApiUrl('posts/sitemap'), { next: { revalidate: 3600 } })
     if (!response.ok) throw new Error('Failed to fetch posts')
     return await response.json()
   } catch (error) {

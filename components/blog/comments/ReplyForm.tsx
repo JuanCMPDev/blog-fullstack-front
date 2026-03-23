@@ -7,6 +7,7 @@ import { ReplyFormProps } from "./types"
 // Componente para el formulario de respuesta
 const ReplyForm: React.FC<ReplyFormProps> = ({ 
   replyContent, 
+  replyFeedback,
   onReplyContentChange, 
   onSubmitReply, 
   onCancelReply, 
@@ -23,15 +24,16 @@ const ReplyForm: React.FC<ReplyFormProps> = ({
         onChange={(e) => onReplyContentChange(e.target.value)}
         disabled={isSubmittingReply}
       />
-      <div className="flex justify-between items-center">
-        <div className="flex space-x-2">
-          <Button variant="outline" size="sm" onClick={onCancelReply} disabled={isSubmittingReply}>
+      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2">
+        <p className="text-xs text-muted-foreground order-2 sm:order-1" aria-live="polite">{replyFeedback ?? ""}</p>
+        <div className="flex flex-col sm:flex-row gap-2 order-1 sm:order-2 w-full sm:w-auto">
+          <Button variant="outline" size="sm" className="w-full sm:w-auto" onClick={onCancelReply} disabled={isSubmittingReply}>
             Cancelar
           </Button>
           <Button
             size="sm"
             onClick={onSubmitReply}
-            className="transition-all duration-200 ease-in-out hover:shadow-md"
+            className="transition-all duration-200 ease-in-out hover:shadow-md w-full sm:w-auto"
             disabled={isSubmittingReply}
           >
             {isSubmittingReply ? (

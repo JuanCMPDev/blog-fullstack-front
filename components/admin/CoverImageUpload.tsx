@@ -1,6 +1,7 @@
 import { useState, useCallback, useRef } from "react"
 import { Button } from "@/components/ui/button"
 import { ImageIcon, X } from "lucide-react"
+import Image from "next/image"
 import type React from "react"
 import { UseFormRegister } from "react-hook-form"
 import { PostFormData } from "@/lib/types"
@@ -98,9 +99,12 @@ export function CoverImageUpload({
         <div className="space-y-2 text-center">
           {coverImagePreview ? (
             <div className="relative inline-block">
-              <img
+              <Image
                 src={coverImagePreview}
                 alt="Cover preview"
+                width={800}
+                height={450}
+                unoptimized
                 className="max-h-48 w-auto rounded-lg shadow-md"
               />
               <Button

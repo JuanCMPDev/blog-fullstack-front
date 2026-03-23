@@ -14,6 +14,10 @@ import { Sidebar } from "@/components/layout/Sidebar"
 import { Badge } from "@/components/ui/badge"
 import { Post, PostStatus } from "@/lib/types"
 import { customFetch } from "@/lib/customFetch"
+import { buildApiUrl } from "@/lib/api"
+import { createLogger } from "@/lib/logger"
+
+const logger = createLogger("SearchPage")
 
 const POSTS_PER_PAGE = 6
 
@@ -57,20 +61,9 @@ function SearchPageContent() {
   const [totalPages, setTotalPages] = useState(1)
   const [currentPage, setCurrentPage] = useState(pageParam)
 
-  // Función para obtener la URL base de la API
-  const getBaseUrl = () => {
-    let apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'
-    if (apiUrl.endsWith('/')) {
-      apiUrl = apiUrl.slice(0, -1)
-    }
-    return apiUrl
-  }
-
   const fetchPosts = useCallback(async () => {
     setIsLoading(true)
     try {
-      const apiUrl = getBaseUrl()
-      
       // Construir parámetros de la URL
       const params = new URLSearchParams()
       
@@ -96,8 +89,8 @@ function SearchPageContent() {
       params.set('orderBy', apiSortField)
       params.set('order', sortOrder)
       
-      const endpoint = `${apiUrl}/posts/search?${params.toString()}`
-      console.log("Búsqueda con:", endpoint)
+      const endpoint = buildApiUrl(`posts/search?${params.toString()}`)
+      logger.debug("Ejecutando búsqueda", { endpoint })
       
       const response = await customFetch(endpoint)
       

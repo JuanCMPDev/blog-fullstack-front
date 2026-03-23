@@ -11,6 +11,8 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { Input } from "@/components/ui/input"
 import { useToast } from "@/hooks/use-toast"
 import { useReCaptcha } from '@/components/common/RecaptchaProvider'
+import { customFetch } from "@/lib/customFetch"
+import { buildApiUrl, extractApiErrorMessageFromResponse } from "@/lib/api"
 
 const passwordSchema = z
   .object({
@@ -55,7 +57,7 @@ export function ResetPasswordForm({ token }: ResetPasswordFormProps) {
         throw new Error("No se pudo obtener el token de reCAPTCHA")
       }
 
-      const response = await fetch(process.env.NEXT_PUBLIC_API_URL + 'auth/reset-password', {
+      const response = await customFetch(buildApiUrl("auth/reset-password"), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
@@ -64,7 +66,10 @@ export function ResetPasswordForm({ token }: ResetPasswordFormProps) {
           recaptchaValue: recaptchaValue
         }),
       })
-      if (!response.ok) throw new Error('Failed to reset password')
+      if (!response.ok) {
+        const message = await extractApiErrorMessageFromResponse(response, "Error al restablecer contraseña")
+        throw new Error(message)
+      }
 
       toast({
         title: "Contraseña actualizada",

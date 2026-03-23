@@ -3,6 +3,12 @@ import { useState, useEffect } from "react";
 import type { UserProfile, Post, UseProfileReturn } from "@/lib/types";
 import { useAuth } from "@/lib/auth";
 import { customFetch } from "@/lib/customFetch";
+import { buildApiUrl, extractApiErrorMessageFromResponse } from "@/lib/api";
+import {
+  buildProfileUpdatePayload,
+  extractAvatarUrlFromPayload,
+  normalizeProfilePayload,
+} from "@/lib/profile-adapter";
 import { useSavedPosts } from "./use-saved-posts";
 import { getPosts } from "@/lib/services/postService";
 import { useActivities } from "./use-activities";
@@ -43,10 +49,10 @@ export const useProfile = (nick: string | undefined): UseProfileReturn => {
       try {
         setIsLoading(true);
         const response = await customFetch(
-          `${process.env.NEXT_PUBLIC_API_URL}profile/${nick}`
+          buildApiUrl(`profile/${nick}`)
         );
         if (!response.ok) throw new Error("Failed to fetch profile");
-        const userData = await response.json();
+        const userData = normalizeProfilePayload(await response.json());
         if (isMounted) {
           setProfile(userData);
           setError(null);
@@ -114,26 +120,9 @@ export const useProfile = (nick: string | undefined): UseProfileReturn => {
     try {
       if (!accessToken) throw new Error("No access token available");
 
-      // Transformar el objeto UserProfile para que coincida con el formato esperado por el DTO
-      const profileDataForBackend = {
-        name: updatedProfile.name,
-        nick: updatedProfile.nick,
-        email: updatedProfile.email,
-        bio: updatedProfile.bio,
-        avatar: updatedProfile.avatar,
-        role: updatedProfile.role,
-        location: updatedProfile.location,
-        skills: updatedProfile.skills,
-        // Convertir las propiedades anidadas de socialLinks a campos separados de nivel superior
-        twitter: updatedProfile.socialLinks.twitter ? `https://twitter.com/${updatedProfile.socialLinks.twitter}` : undefined,
-        github: updatedProfile.socialLinks.github ? `https://github.com/${updatedProfile.socialLinks.github}` : undefined,
-        linkedin: updatedProfile.socialLinks.linkedin ? `https://linkedin.com/in/${updatedProfile.socialLinks.linkedin}` : undefined,
-        // No enviamos socialLinks como objeto anidado, ya que el DTO espera propiedades individuales
-      };
+      const profileDataForBackend = buildProfileUpdatePayload(updatedProfile);
 
-      console.log("Datos enviados al backend:", profileDataForBackend);
-
-      const response = await customFetch(`${process.env.NEXT_PUBLIC_API_URL}profile/me`, {
+      const response = await customFetch(buildApiUrl("profile/me"), {
         method: "PATCH",
         headers: {
           Authorization: `Bearer ${accessToken}`,
@@ -143,11 +132,11 @@ export const useProfile = (nick: string | undefined): UseProfileReturn => {
         body: JSON.stringify(profileDataForBackend),
       });
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || "Failed to update profile");
+        const message = await extractApiErrorMessageFromResponse(response, "Failed to update profile");
+        throw new Error(message);
       }
 
-      const updatedData = await response.json();
+      const updatedData = normalizeProfilePayload(await response.json());
       setProfile(updatedData);
       
       // Actualizar también el estado de autenticación si el perfil actualizado es del usuario actual
@@ -174,14 +163,20 @@ export const useProfile = (nick: string | undefined): UseProfileReturn => {
     const formData = new FormData();
     formData.append("file", newAvatar);
     try {
-      const response = await customFetch(`${process.env.NEXT_PUBLIC_API_URL}users/avatar/`, {
+      const response = await customFetch(buildApiUrl("users/avatar"), {
         method: "PATCH",
         headers: { Authorization: `Bearer ${accessToken}` },
         credentials: "include",
         body: formData,
       });
       if (!response.ok) throw new Error("Failed to update avatar");
-      const { avatarUrl } = await response.json();
+      const avatarPayload = await response.json();
+      const avatarUrl = extractAvatarUrlFromPayload(avatarPayload);
+
+      if (!avatarUrl) {
+        await fetchProfile();
+        return;
+      }
       
       // Actualizar el perfil local
       setProfile(prev => (prev ? { ...prev, avatar: avatarUrl } : null));
@@ -202,7 +197,7 @@ export const useProfile = (nick: string | undefined): UseProfileReturn => {
     const formData = new FormData();
     formData.append("file", newCoverImage);
     try {
-      const response = await customFetch(`${process.env.NEXT_PUBLIC_API_URL}profile/cover-image`, {
+      const response = await customFetch(buildApiUrl("profile/cover-image"), {
         method: "PATCH",
         headers: { Authorization: `Bearer ${accessToken}` },
         credentials: "include",
@@ -228,12 +223,12 @@ export const useProfile = (nick: string | undefined): UseProfileReturn => {
 
   const fetchProfile = async () => {
     try {
-      const response = await customFetch(`${process.env.NEXT_PUBLIC_API_URL}profile/${nick}`, {
+      const response = await customFetch(buildApiUrl(`profile/${nick}`), {
         headers: { Authorization: `Bearer ${accessToken}` },
         credentials: "include",
       });
       if (!response.ok) throw new Error("Failed to fetch profile");
-      const userData = await response.json();
+      const userData = normalizeProfilePayload(await response.json());
       setProfile(userData);
     } catch (err) {
       console.error(err);

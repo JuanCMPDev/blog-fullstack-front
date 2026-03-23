@@ -1,6 +1,7 @@
 import { useState, useCallback, useRef } from "react"
 import { Button } from "@/components/ui/button"
 import { ImageIcon, X } from "lucide-react"
+import Image from "next/image"
 import type React from "react"
 
 interface SimpleCoverImageUploadProps {
@@ -85,9 +86,12 @@ export function SimpleCoverImageUpload({
         <div className="space-y-2 text-center">
           {displayImage ? (
             <div className="relative inline-block">
-              <img
+              <Image
                 src={displayImage}
                 alt="Vista previa"
+                width={800}
+                height={450}
+                unoptimized
                 className="max-h-48 w-auto rounded-lg shadow-md"
               />
               <Button

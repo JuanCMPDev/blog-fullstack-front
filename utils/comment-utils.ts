@@ -1,4 +1,8 @@
 import type { Comment, Author } from "@/lib/types"
+import { buildApiUrl } from "@/lib/api"
+import { createLogger } from "@/lib/logger"
+
+const logger = createLogger("comment-utils")
 
 // Definimos interfaces para los datos que provienen de la API
 interface ApiCommentData {
@@ -52,6 +56,7 @@ export const ensureCommentStructure = (comment: Partial<Comment> | ApiCommentDat
   if (comment.author && typeof comment.author === 'object') {
     author = {
       id: comment.author.id || 'unknown',
+      nick: (comment.author as ApiCommentData['author'])?.nick,
       name: comment.author.name || (comment.author as ApiCommentData['author'])?.nick || 'Usuario',
       avatar: comment.author.avatar || ''
     };
@@ -102,6 +107,7 @@ export function convertApiReplyToComment(apiReply: ApiCommentData): Comment {
     parentId: apiReply.parentId,
     author: {
       id: apiReply.author?.id || apiReply.authorId || 'unknown',
+      nick: apiReply.author?.nick,
       name: apiReply.author?.name || 'Usuario',
       avatar: apiReply.author?.avatar || ''
     },
@@ -128,17 +134,12 @@ export async function loadCommentsReplies(commentId: string): Promise<Comment[]>
   // Verificar si tenemos datos en caché y si son recientes
   const cachedData = repliesCache.get(commentId);
   if (cachedData && (Date.now() - cachedData.timestamp) < CACHE_DURATION) {
-    console.debug(`Usando respuestas en caché para el comentario ${commentId.slice(0, 6)}...`);
+    logger.debug("Usando respuestas en caché", { commentId: commentId.slice(0, 6) });
     return cachedData.data;
   }
   
   try {
-    let apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
-    if (apiUrl.endsWith('/')) {
-      apiUrl = apiUrl.slice(0, -1);
-    }
-    
-    const endpoint = `${apiUrl}/comments/replies/${commentId}?limit=50`;
+    const endpoint = buildApiUrl(`comments/replies/${commentId}?limit=50`);
     
     // Usar AbortController para poder cancelar la petición si tarda demasiado
     const controller = new AbortController();
@@ -155,7 +156,9 @@ export async function loadCommentsReplies(commentId: string): Promise<Comment[]>
       if (!response.ok) {
         // Si el comentario no existe (404), devolver un array vacío sin error
         if (response.status === 404) {
-          console.debug(`El comentario ${commentId.slice(0, 6)}... ya no existe o no tiene respuestas.`);
+          logger.debug("El comentario no existe o no tiene respuestas", {
+            commentId: commentId.slice(0, 6),
+          });
           return [];
         }
         // Para otros errores, lanzar una excepción con el código de estado
@@ -190,7 +193,7 @@ export async function loadCommentsReplies(commentId: string): Promise<Comment[]>
     } catch (error) {
       // Si la petición fue abortada por timeout
       if (error instanceof DOMException && error.name === 'AbortError') {
-        console.debug('La petición de respuestas fue cancelada por timeout');
+        logger.debug("La petición de respuestas fue cancelada por timeout", { commentId });
         return [];
       }
       

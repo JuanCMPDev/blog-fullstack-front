@@ -1,4 +1,3 @@
-import { motion } from "framer-motion"
 import { Button } from "@/components/ui/button"
 import { Github, Linkedin, Twitter } from "lucide-react"
 
@@ -10,28 +9,20 @@ const socialLinks = [
 
 export function SocialLinks() {
   return (
-    <div className="flex flex-col space-y-4">
-      {socialLinks.map((link, index) => (
-        <motion.div
+    <div className="flex gap-2">
+      {socialLinks.map((link) => (
+        <Button
           key={link.name}
-          initial={{ opacity: 0, x: -20 }}
-          animate={{ opacity: 1, x: 0 }}
-          transition={{ delay: index * 0.1 }}
-          whileHover={{ scale: 1.05 }}
-          whileTap={{ scale: 0.95 }}
+          variant="outline"
+          size="icon"
+          className="border-border/30 hover:bg-primary/10 hover:border-primary/40 hover:text-primary transition-all duration-200"
+          asChild
         >
-          <Button
-            variant="outline"
-            className="w-full bg-background hover:bg-primary/10 text-foreground hover:text-primary transition-all duration-300 shadow-sm hover:shadow-md rounded-lg"
-            asChild
-          >
-            <a href={link.url} target="_blank" rel="noopener noreferrer">
-              <link.icon className="mr-2 h-4 w-4" /> {link.name}
-            </a>
-          </Button>
-        </motion.div>
+          <a href={link.url} target="_blank" rel="noopener noreferrer" aria-label={link.name}>
+            <link.icon className="h-4 w-4" />
+          </a>
+        </Button>
       ))}
     </div>
   )
 }
-

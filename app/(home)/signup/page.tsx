@@ -15,6 +15,11 @@ import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/componen
 import { Progress } from "@/components/ui/progress"
 import { useRouter } from "next/navigation"
 import { useReCaptcha } from '@/components/common/RecaptchaProvider'
+import { customFetch } from "@/lib/customFetch"
+import { buildApiUrl, extractApiErrorMessageFromResponse } from "@/lib/api"
+import { createLogger } from "@/lib/logger"
+
+const logger = createLogger("SignupPage")
 
 const passwordStrengthColor = ["bg-red-500", "bg-orange-500", "bg-yellow-500", "bg-lime-500", "bg-green-500"]
 
@@ -104,8 +109,11 @@ export default function SignUp() {
         password: data.password,
         recaptchaValue: recaptchaValue
       }
-      console.log(dataToSend)
-      const res = await fetch(process.env.NEXT_PUBLIC_API_URL + "auth/register", {
+      logger.debug("Payload de registro preparado", {
+        email: data.email,
+        nick: data.nick,
+      })
+      const res = await customFetch(buildApiUrl("auth/register"), {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -113,12 +121,13 @@ export default function SignUp() {
         body: JSON.stringify(dataToSend),
       })
       if (!res.ok) {
-        const { message } = await res.json()
+        const message = await extractApiErrorMessageFromResponse(res, "Error al crear la cuenta")
         throw new Error(message)
       }
       toast({
         title: "Cuenta creada",
-        description: "Tu cuenta ha sido creada con éxito. Ahora puedes iniciar sesión.",
+        description: "Te hemos enviado un email de verificación. Revisa tu bandeja de entrada para activar tu cuenta.",
+        duration: 10000,
       })
       router.push("/signin")
     } catch (error: unknown) {

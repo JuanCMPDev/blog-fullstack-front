@@ -6,6 +6,11 @@ import { useAuth } from '@/lib/auth'
 import { toast } from '@/hooks/use-toast'
 import { useRouter } from 'next/navigation'
 import { customFetch } from '@/lib/customFetch'
+import { buildApiUrl } from '@/lib/api'
+import { buildCreatePostFormData } from '@/lib/post-create-payload'
+import { createLogger } from '@/lib/logger'
+
+const logger = createLogger('useCreatePost')
 
 export const useCreatePost = (initialTags: string[]) => {
   const [slug, setSlug] = useState<string>('')
@@ -13,6 +18,8 @@ export const useCreatePost = (initialTags: string[]) => {
   // Almacenar también el archivo seleccionado:
   const [coverImageFile, setCoverImageFile] = useState<File | null>(null)
   const [tags, setTags] = useState<string[]>(initialTags)
+  const [courseId, setCourseId] = useState<string | null>(null)
+  const [courseOrder, setCourseOrder] = useState<number | null>(null)
 
   const { accessToken, user } = useAuth();
   const router = useRouter();
@@ -29,6 +36,7 @@ export const useCreatePost = (initialTags: string[]) => {
       title: '',
       excerpt: '',
       content: '',
+      contentV2: '',
       tags: [],
       slug: ''  // Asegurarnos de que slug tenga un valor inicial
     },
@@ -64,10 +72,7 @@ export const useCreatePost = (initialTags: string[]) => {
 
   // Enviar los datos del formulario usando FormData para enviar archivos
   const onSubmit = async (data: PostFormData, isDraft = false) => {
-    console.log('Form data:', data)
-
-    // Verificar si el usuario está autenticado
-    if (!user) {
+    if (!user || !accessToken) {
       toast({
         title: 'Error',
         description: 'Debes iniciar sesión para crear un post.',
@@ -76,40 +81,31 @@ export const useCreatePost = (initialTags: string[]) => {
       return;
     }
 
-    // Crear el objeto FormData
-    const formData = new FormData();
-    formData.append('title', data.title);
-    formData.append('slug', data.slug);
-    formData.append('authorId', user.userId); // Usar el userId del usuario autenticado
-    formData.append('excerpt', data.excerpt);
-    formData.append('content', data.content);
-    
-    // Para tags, enviar cada tag como un elemento separado con el mismo nombre
-    // Esto permite que el backend los reciba como un array
-    if (data.tags && data.tags.length > 0) {
-      data.tags.forEach(tag => {
-        formData.append('tags', tag);
-      });
-    }
-    
-    // Solo enviar fecha de publicación si no es borrador
-    if (!isDraft) {
-      formData.append('publishDate', new Date().toISOString());
-    }
-    
-    formData.append('status', isDraft ? 'DRAFT' : 'PUBLISHED');
-    
-    // Si hay un archivo seleccionado, agrégalo
+    let imageFileName: string | undefined
     if (coverImageFile) {
-      // No necesitas establecer manualmente un nombre si lo deseas; pero si quieres personalizarlo:
-      const extension = coverImageFile.name.split('.').pop();
-      const timestamp = Date.now();
-      const fileName = `posts/${data.slug}-${timestamp}.${extension}`;
-      formData.append('image', coverImageFile, fileName);
+      const extension = coverImageFile.name.split('.').pop()
+      const timestamp = Date.now()
+      imageFileName = `posts/${data.slug}-${timestamp}.${extension}`
     }
 
+    const status = isDraft ? 'DRAFT' : 'PUBLISHED'
+    const formData = buildCreatePostFormData({
+      title: data.title,
+      slug: data.slug,
+      excerpt: data.excerpt,
+      content: data.content,
+      contentV2: data.contentV2,
+      tags: data.tags,
+      status,
+      publishDate: !isDraft ? new Date().toISOString() : undefined,
+      image: coverImageFile,
+      imageFileName,
+      courseId,
+      courseOrder,
+    })
+
     try {
-      const response = await customFetch(`${process.env.NEXT_PUBLIC_API_URL}posts`, {
+      const response = await customFetch(buildApiUrl('posts'), {
         method: 'POST',
         headers: {
           Authorization: `Bearer ${accessToken}`,
@@ -141,7 +137,7 @@ export const useCreatePost = (initialTags: string[]) => {
       
       return createdPost
     } catch (error) {
-      console.error('Error al crear el post:', error)
+      logger.error('Error al crear el post', error)
       // Aquí puedes manejar el error mostrando un mensaje al usuario
       toast({
         title: 'Error',
@@ -168,5 +164,9 @@ export const useCreatePost = (initialTags: string[]) => {
     setTags,
     handleTitleChange,
     onSubmit,
+    courseId,
+    setCourseId,
+    courseOrder,
+    setCourseOrder,
   }
 }

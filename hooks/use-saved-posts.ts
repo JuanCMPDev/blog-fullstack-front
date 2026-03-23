@@ -2,6 +2,7 @@ import { useState, useCallback, useEffect } from "react"
 import { useAuth } from "@/lib/auth"
 import { useToast } from "./use-toast"
 import { customFetch } from "@/lib/customFetch"
+import { buildApiUrl } from '@/lib/api'
 
 // Hook para manejar los posts guardados
 export function useSavedPosts() {
@@ -22,15 +23,9 @@ export function useSavedPosts() {
 
     setIsLoading(true)
     try {
-      // Asegurarse de que la URL no tenga barras duplicadas
-      let apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'
-      // Eliminar la barra final si existe
-      if (apiUrl.endsWith('/')) {
-        apiUrl = apiUrl.slice(0, -1)
-      }
       const token = auth.accessToken
       
-      const response = await customFetch(`${apiUrl}/saved-posts`, {
+      const response = await customFetch(buildApiUrl(`saved-posts`), {
         headers: {
           Authorization: `Bearer ${token}`
         }
@@ -63,15 +58,9 @@ export function useSavedPosts() {
     }
 
     try {
-      // Asegurarse de que la URL no tenga barras duplicadas
-      let apiUrl = process.env.NEXT_PUBLIC_API_URL || ''
-      // Eliminar la barra final si existe
-      if (apiUrl.endsWith('/')) {
-        apiUrl = apiUrl.slice(0, -1)
-      }
       const token = auth.accessToken
       
-      const response = await customFetch(`${apiUrl}/saved-posts/${postId}`, {
+      const response = await customFetch(buildApiUrl(`saved-posts/${postId}`), {
         method: 'POST',
         headers: {
           Authorization: `Bearer ${token}`
@@ -104,15 +93,9 @@ export function useSavedPosts() {
     if (!auth.user) return false
 
     try {
-      // Asegurarse de que la URL no tenga barras duplicadas
-      let apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'
-      // Eliminar la barra final si existe
-      if (apiUrl.endsWith('/')) {
-        apiUrl = apiUrl.slice(0, -1)
-      }
       const token = auth.accessToken
       
-      const response = await customFetch(`${apiUrl}/saved-posts/${postId}`, {
+      const response = await customFetch(buildApiUrl(`saved-posts/${postId}`), {
         method: 'DELETE',
         headers: {
           Authorization: `Bearer ${token}`

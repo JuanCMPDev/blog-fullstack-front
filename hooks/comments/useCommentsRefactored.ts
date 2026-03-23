@@ -4,6 +4,9 @@ import { useCommentState } from "./useCommentState";
 import { useCommentUtils } from "./useCommentUtils";
 import { useFetchComments } from "./useFetchComments";
 import { useCommentInteractions } from "./useCommentInteractions";
+import { createLogger } from "@/lib/logger";
+
+const logger = createLogger("useCommentsRefactored")
 
 interface UseCommentsProps {
   postId: number | null;
@@ -13,7 +16,7 @@ interface UseCommentsProps {
 /**
  * Hook principal para el manejo de comentarios (versión refactorizada)
  */
-export const useCommentsRefactored = ({ postId, initialComments = [] }: UseCommentsProps): UseCommentsReturn => {
+export const useCommentsRefactored = ({ postId, initialComments = [] }: UseCommentsProps) => {
   // Asegurar que initialComments sea siempre un array
   const safeInitialComments = Array.isArray(initialComments) ? initialComments : [];
   
@@ -42,12 +45,11 @@ export const useCommentsRefactored = ({ postId, initialComments = [] }: UseComme
   } = useCommentState(safeInitialComments);
   
   // Utilidades generales
-  const { getBaseApiUrl, updateCommentRecursively, removeCommentRecursively } = useCommentUtils();
+  const { buildApiUrl, updateCommentRecursively, removeCommentRecursively } = useCommentUtils();
   
   // Operaciones de carga
   const { fetchComments } = useFetchComments({
     postId,
-    getBaseApiUrl,
     setComments,
     setMeta,
     setHasMore,
@@ -68,7 +70,8 @@ export const useCommentsRefactored = ({ postId, initialComments = [] }: UseComme
     deleteComment 
   } = useCommentInteractions({
     postId,
-    getBaseApiUrl,
+    comments,
+    buildApiUrl,
     updateCommentRecursively,
     removeCommentRecursively,
     setComments,
@@ -91,11 +94,11 @@ export const useCommentsRefactored = ({ postId, initialComments = [] }: UseComme
     // Validar que el orden sea uno de los valores permitidos
     const validOrders = ['newest', 'oldest', 'likes_desc', 'likes_asc'];
     if (!validOrders.includes(newOrder)) {
-      console.error(`[ERROR] Orden inválido: ${newOrder}. Debe ser uno de: ${validOrders.join(', ')}`);
+      logger.error(`Orden inválido: ${newOrder}. Debe ser uno de: ${validOrders.join(', ')}`)
       return;
     }
-    
-    console.log(`[DEBUG] Cambiando orden de comentarios: ${order} -> ${newOrder}`);
+
+    logger.debug(`Cambiando orden de comentarios: ${order} -> ${newOrder}`)
     setOrder(newOrder);
     // Enviamos el nuevo valor directamente a fetchComments
     fetchComments(1, true, newOrder);

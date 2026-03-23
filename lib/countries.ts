@@ -41,3 +41,51 @@ export const countries = [
   { name: "Tailandia", code: "TH", emoji: "🇹🇭" },
   { name: "Pakistán", code: "PK", emoji: "🇵🇰" },
 ];
+
+export interface ParsedLocation {
+  code: string | null
+  name: string
+  flagUrl: string | null
+}
+
+/**
+ * Parses a location string into structured data with a flag image URL.
+ * Handles all stored formats: code-only ("CO"), emoji+name ("🇨🇴 Colombia"),
+ * name-only ("Colombia"), or unrecognized strings.
+ * Uses flagcdn.com for flag images (works on all platforms including Windows).
+ */
+export function parseLocation(location: string | undefined | null): ParsedLocation {
+  if (!location || location.trim() === "") {
+    return { code: null, name: "", flagUrl: null }
+  }
+
+  const trimmed = location.trim()
+
+  // If it's a 2-letter code (e.g. "CO"), look it up
+  if (/^[A-Z]{2}$/i.test(trimmed)) {
+    const country = countries.find(c => c.code.toUpperCase() === trimmed.toUpperCase())
+    if (country) {
+      return {
+        code: country.code.toLowerCase(),
+        name: country.name,
+        flagUrl: `https://flagcdn.com/w40/${country.code.toLowerCase()}.png`,
+      }
+    }
+    return { code: null, name: trimmed, flagUrl: null }
+  }
+
+  // Try to find a country match (by name or emoji in the string)
+  const country = countries.find(
+    c => trimmed.includes(c.name) || trimmed.includes(c.emoji)
+  )
+  if (country) {
+    return {
+      code: country.code.toLowerCase(),
+      name: country.name,
+      flagUrl: `https://flagcdn.com/w40/${country.code.toLowerCase()}.png`,
+    }
+  }
+
+  // Unrecognized - return as-is
+  return { code: null, name: trimmed, flagUrl: null }
+}

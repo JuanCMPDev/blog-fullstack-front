@@ -10,7 +10,7 @@ interface AuthorAvatarProps {
 export function AuthorAvatar({ author, className }: AuthorAvatarProps) {
   // Si no hay autor, usar valores predeterminados
   const name = author?.name || 'Usuario';
-  const avatarUrl = author ? getAvatarUrl(author.avatar) : '/placeholder-user.jpg';
+  const avatarUrl = author ? getAvatarUrl(author.avatar) : '/profile.jpg';
   const initial = name.charAt(0).toUpperCase();
   
   return (

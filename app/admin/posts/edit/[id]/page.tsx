@@ -4,8 +4,9 @@ import { useState, useEffect, useRef } from "react"
 import { useParams, useRouter } from "next/navigation"
 import { Loader2, Save, X } from "lucide-react"
 import { SimpleCoverImageUpload } from "@/components/admin/SimpleCoverImageUpload"
-import { SimpleContentEditor } from "@/components/admin/SimpleContentEditor"
+import { PostEditorV2 } from "@/components/admin/PostEditorV2"
 import { SimpleTagInput } from "@/components/admin/SimpleTagInput"
+import { CourseSelector } from "@/components/admin/CourseSelector"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
@@ -27,12 +28,24 @@ export default function EditPostPage() {
   const [selectedImage, setSelectedImage] = useState<File | null>(null)
   const [imagePreview, setImagePreview] = useState<string | null>(null)
   const [imageWasRemoved, setImageWasRemoved] = useState(false)
+
+  useEffect(() => {
+    return () => {
+      if (imagePreview?.startsWith('blob:')) {
+        URL.revokeObjectURL(imagePreview)
+      }
+    }
+  }, [imagePreview])
   
+  const [courseId, setCourseId] = useState<string | null>(null)
+  const [courseOrder, setCourseOrder] = useState<number | null>(null)
+
   // Definir el estado en el componente principal
-  const [formData, setFormData] = useState<Partial<Post>>({
+  const [formData, setFormData] = useState<Partial<Post> & { contentV2?: string }>({
     title: "",
     excerpt: "",
     content: "",
+    contentV2: "",
     tags: []
   })
   
@@ -46,8 +59,11 @@ export default function EditPostPage() {
         title: post.title || "",
         excerpt: post.excerpt || "",
         content: post.content || "",
+        contentV2: post.contentV2 || "",
         tags: post.tags || []
       })
+      setCourseId(post.courseId ?? null)
+      setCourseOrder(post.courseOrder ?? null)
       initialized.current = true
     }
   }, [post])
@@ -58,10 +74,6 @@ export default function EditPostPage() {
     setFormData(prev => ({ ...prev, [name]: value }))
   }
 
-  const handleContentChange = (value: string) => {
-    setFormData(prev => ({ ...prev, content: value }))
-  }
-
   const handleTagsChange = (tags: string[]) => {
     setFormData(prev => ({ ...prev, tags }))
   }
@@ -70,21 +82,30 @@ export default function EditPostPage() {
     if (file) {
       setSelectedImage(file)
       setImageWasRemoved(false)
-      
-      // Crear una URL para previsualizar la imagen
-      const reader = new FileReader()
-      reader.onloadend = () => {
-        setImagePreview(reader.result as string)
+
+      if (imagePreview?.startsWith('blob:')) {
+        URL.revokeObjectURL(imagePreview)
       }
-      reader.readAsDataURL(file)
+
+      setImagePreview(URL.createObjectURL(file))
     } else {
       setSelectedImage(null)
+
+      if (imagePreview?.startsWith('blob:')) {
+        URL.revokeObjectURL(imagePreview)
+      }
+
       setImagePreview(null)
     }
   }
   
   const handleImageRemove = () => {
     setSelectedImage(null)
+
+    if (imagePreview?.startsWith('blob:')) {
+      URL.revokeObjectURL(imagePreview)
+    }
+
     setImagePreview(null)
     setImageWasRemoved(true)
   }
@@ -106,7 +127,7 @@ export default function EditPostPage() {
         imageToSend = selectedImage
       }
       
-      const success = await updatePost(formData, imageToSend)
+      const success = await updatePost({ ...formData, courseId, courseOrder }, imageToSend)
       
       if (success) {
         router.push('/admin/posts')
@@ -183,14 +204,27 @@ export default function EditPostPage() {
               />
             </div>
 
-            <SimpleContentEditor
-              value={formData.content || ""}
-              onChange={handleContentChange}
+            <PostEditorV2
+              initialLegacyContent={formData.content || ""}
+              initialContentV2={formData.contentV2 || ""}
+              onChange={({ legacyContent, contentV2 }) => {
+                setFormData((prev) => ({
+                  ...prev,
+                  content: legacyContent,
+                  contentV2,
+                }))
+              }}
             />
 
             <SimpleTagInput
               tags={formData.tags || []}
               onChange={handleTagsChange}
+            />
+
+            <CourseSelector
+              courseId={courseId}
+              courseOrder={courseOrder}
+              onChange={(id, order) => { setCourseId(id); setCourseOrder(order); }}
             />
 
             <SimpleCoverImageUpload
