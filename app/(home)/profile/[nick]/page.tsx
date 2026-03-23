@@ -292,7 +292,7 @@ export default function ProfilePage() {
                             <div className="absolute left-[17px] sm:left-[19px] top-2 bottom-2 w-px bg-border/50" />
 
                             <div className="space-y-1">
-                              {activities.map((activity, actIdx) => {
+                              {activities.map((activity) => {
                                 const activityConfig = {
                                   LIKED: {
                                     icon: <Heart className="h-3.5 w-3.5" />,

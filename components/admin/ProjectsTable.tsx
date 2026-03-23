@@ -57,7 +57,6 @@ import type {
   ProjectUpdatePayload,
 } from "@/lib/types"
 import { ProjectStatus, ProjectGridSize } from "@/lib/types"
-import { cn } from "@/lib/utils"
 
 // ── Status helpers ────────────────────────────────────────────────────
 

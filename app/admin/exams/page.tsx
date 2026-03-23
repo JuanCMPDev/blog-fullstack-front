@@ -26,7 +26,7 @@ const DIFFICULTY_COLORS: Record<string, string> = {
   HARD: "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200",
 }
 
-function CourseExamsRow({ courseId, courseTitle, courseSlug, difficulty, postCount }: {
+function CourseExamsRow({ courseId, courseTitle, difficulty, postCount }: {
   courseId: string
   courseTitle: string
   courseSlug: string

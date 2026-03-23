@@ -14,9 +14,8 @@ import {
 import { Badge } from "@/components/ui/badge"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Skeleton } from "@/components/ui/skeleton"
-import { Github, Loader2, Check, ExternalLink } from "lucide-react"
+import { Github, Loader2, Check } from "lucide-react"
 import { useGitHubImport } from "@/hooks/use-projects"
-import type { GitHubRepo } from "@/lib/types"
 import { cn } from "@/lib/utils"
 
 interface GitHubImportDialogProps {

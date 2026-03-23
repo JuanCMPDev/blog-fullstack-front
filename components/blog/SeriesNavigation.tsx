@@ -1,7 +1,7 @@
 "use client"
 
 import Link from "next/link"
-import { useSeriesNavigation, type SeriesNavigation } from "@/hooks/use-courses"
+import { useSeriesNavigation } from "@/hooks/use-courses"
 import { ChevronLeft, ChevronRight, BookOpen } from "lucide-react"
 import { Button } from "@/components/ui/button"
 

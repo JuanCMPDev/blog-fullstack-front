@@ -50,7 +50,7 @@ export function RecentActivityFeed({ activities }: Props) {
         ) : (
           <ScrollArea className="h-[340px]">
             <div className="px-4 pb-4 space-y-1">
-              {activities.map((activity, i) => {
+              {activities.map((activity) => {
                 const config = activityConfig[activity.type] ?? {
                   icon: Activity,
                   color: 'bg-muted text-muted-foreground',
