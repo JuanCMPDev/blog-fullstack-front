@@ -54,7 +54,7 @@ const floatingSymbols: FloatingSymbol[] = [
 
 export function Hero() {
   const typewriterText = useTypewriter(
-    ['tecnología', 'inteligencia artificial', 'desarrollo web', 'gadgets y tendencias'],
+    ['tecnología', 'IA', 'desarrollo web', 'gadgets', 'ciberseguridad', 'cloud'],
     150, 100, 2000
   );
 
@@ -98,7 +98,7 @@ export function Hero() {
           {/* Main heading */}
           <h1 className="font-headline text-4xl sm:text-5xl md:text-6xl font-extrabold tracking-tight mb-4 leading-[1.1]">
             <span className="block">Explora.</span>
-            <span className="block text-primary text-glow">
+            <span className="block text-primary text-glow min-h-[1.2em]">
               {typewriterText}
               <span className="animate-blink">|</span>
             </span>

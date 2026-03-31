@@ -6,6 +6,8 @@ import { Toaster } from '@/components/ui/toaster'
 import { AuthProvider } from "@/components/layout/AuthProvider"
 
 import { GoogleAnalytics } from '@next/third-parties/google'
+import { Analytics } from '@vercel/analytics/next'
+import { SpeedInsights } from '@vercel/speed-insights/next'
 const inter = Inter({
   subsets: ['latin'],
   display: 'swap',
@@ -82,6 +84,8 @@ export default function RootLayout({
           </ThemeProvider>
         <Toaster />
         <GoogleAnalytics gaId="G-7XXV5BXWEF" />
+        <Analytics />
+        <SpeedInsights />
       </body>
     </html>
   )
