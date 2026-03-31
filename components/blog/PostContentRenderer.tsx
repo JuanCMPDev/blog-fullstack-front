@@ -3,6 +3,7 @@
 import { AlertCircle } from "lucide-react"
 import { isSafeYouTubeVideoId, type PostContentBlock } from "@/lib/post-content-v2"
 import { QuizBlockView } from "@/components/blog/QuizBlockView"
+import { InlineMarkdown } from "@/components/blog/InlineMarkdown"
 
 interface PostContentRendererProps {
   blocks: PostContentBlock[]
@@ -13,13 +14,13 @@ export function PostContentRenderer({ blocks }: PostContentRendererProps) {
     <div className="prose prose-lg dark:prose-invert max-w-none mb-8 space-y-4 text-left break-words">
       {blocks.map((block) => {
         if (block.type === "paragraph") {
-          return <p key={block.id}>{block.text}</p>
+          return <p key={block.id}><InlineMarkdown text={block.text} /></p>
         }
 
         if (block.type === "heading") {
-          if (block.level === 1) return <h1 key={block.id}>{block.text}</h1>
-          if (block.level === 2) return <h2 key={block.id}>{block.text}</h2>
-          return <h3 key={block.id}>{block.text}</h3>
+          if (block.level === 1) return <h1 key={block.id}><InlineMarkdown text={block.text} /></h1>
+          if (block.level === 2) return <h2 key={block.id}><InlineMarkdown text={block.text} /></h2>
+          return <h3 key={block.id}><InlineMarkdown text={block.text} /></h3>
         }
 
         if (block.type === "image") {
@@ -32,7 +33,7 @@ export function PostContentRenderer({ blocks }: PostContentRendererProps) {
                 className="rounded-lg max-w-full mx-auto"
                 loading="lazy"
               />
-              {block.caption ? <figcaption className="text-center text-sm mt-2">{block.caption}</figcaption> : null}
+              {block.caption ? <figcaption className="text-center text-sm mt-2"><InlineMarkdown text={block.caption} /></figcaption> : null}
             </figure>
           )
         }
@@ -52,7 +53,7 @@ export function PostContentRenderer({ blocks }: PostContentRendererProps) {
                   />
                 ))}
               </div>
-              {block.caption ? <figcaption className="text-center text-sm">{block.caption}</figcaption> : null}
+              {block.caption ? <figcaption className="text-center text-sm"><InlineMarkdown text={block.caption} /></figcaption> : null}
             </figure>
           )
         }
@@ -97,7 +98,7 @@ export function PostContentRenderer({ blocks }: PostContentRendererProps) {
             <video controls className="w-full rounded-lg" preload="metadata" src={block.asset.url}>
               Tu navegador no soporta video HTML5.
             </video>
-            {block.caption ? <figcaption className="text-center text-sm">{block.caption}</figcaption> : null}
+            {block.caption ? <figcaption className="text-center text-sm"><InlineMarkdown text={block.caption} /></figcaption> : null}
           </figure>
         )
       })}
