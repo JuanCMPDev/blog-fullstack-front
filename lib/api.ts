@@ -16,13 +16,19 @@ export function buildApiUrl(path: string): string {
   if (!path) return path
   if (isAbsoluteUrl(path)) return path
 
+  const normalizedPath = normalizePath(path)
+  const pathWithoutApiPrefix = normalizedPath.replace(/^api\/v1\//, "")
+
+  // En el navegador, usar el proxy local de Next.js rewrites para evitar CORS
+  if (typeof window !== "undefined") {
+    return `/api/v1/${pathWithoutApiPrefix}`
+  }
+
+  // En el servidor (SSR), llamar directamente al backend
   const baseUrl = trimTrailingSlash(process.env.NEXT_PUBLIC_API_URL || "")
   if (!baseUrl) return path
 
-  const normalizedPath = normalizePath(path)
-  const pathWithoutApiPrefix = normalizedPath.replace(/^api\/v1\//, "")
   const baseHasApiPrefix = /\/api\/v1$/i.test(baseUrl)
-
   const finalPath = baseHasApiPrefix ? pathWithoutApiPrefix : normalizedPath
   return `${baseUrl}/${finalPath}`
 }
