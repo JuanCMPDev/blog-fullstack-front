@@ -10,7 +10,7 @@ interface PostContentRendererProps {
 
 export function PostContentRenderer({ blocks }: PostContentRendererProps) {
   return (
-    <div className="prose prose-lg dark:prose-invert max-w-none mb-8 space-y-4 text-justify">
+    <div className="prose prose-lg dark:prose-invert max-w-none mb-8 space-y-4 text-left break-words">
       {blocks.map((block) => {
         if (block.type === "paragraph") {
           return <p key={block.id}>{block.text}</p>

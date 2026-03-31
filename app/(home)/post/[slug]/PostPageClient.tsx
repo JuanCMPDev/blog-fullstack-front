@@ -42,7 +42,7 @@ const MarkdownRenderer = memo(({ content }: { content: string }) => {
   void content
   
   return (
-    <div className="prose prose-lg dark:prose-invert max-w-none mb-8 text-justify">
+    <div className="prose prose-lg dark:prose-invert max-w-none mb-8 text-left break-words">
       <style jsx global>{`
         .prose h1 {
           font-size: 1.875rem;
@@ -446,7 +446,7 @@ export function PostPageClient() {
     }
     
     return (
-      <div className="prose prose-lg dark:prose-invert max-w-none mb-8 text-justify">
+      <div className="prose prose-lg dark:prose-invert max-w-none mb-8 text-left break-words">
         <style jsx global>{`
           /* Estilos globales para imágenes en contenido HTML */
           .prose img {
