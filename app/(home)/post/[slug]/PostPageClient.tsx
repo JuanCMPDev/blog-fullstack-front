@@ -213,18 +213,12 @@ export function PostPageClient() {
   const { user } = useAuth()
   const { toast } = useToast()
 
-  // Esperar a que zustand rehidrate el auth state desde localStorage
-  const [hydrated, setHydrated] = useState(useAuth.persist?.hasHydrated?.() ?? false)
-  useEffect(() => {
-    if (hydrated) return
-    const unsub = useAuth.persist?.onFinishHydration?.(() => setHydrated(true))
-    // Si ya hidrató mientras montábamos el listener
-    if (useAuth.persist?.hasHydrated?.()) setHydrated(true)
-    return unsub
-  }, [hydrated])
+  // Esperar al primer render del cliente para que Zustand rehidrate desde localStorage
+  const [mounted, setMounted] = useState(false)
+  useEffect(() => { setMounted(true) }, [])
 
   useEffect(() => {
-    if (!hydrated) return
+    if (!mounted) return
 
     const fetchPost = async () => {
       setIsLoading(true)
@@ -274,7 +268,7 @@ export function PostPageClient() {
     if (slug) {
       fetchPost()
     }
-  }, [slug, router, toast, user, hydrated])
+  }, [slug, router, toast, user, mounted])
 
   // Auto-mark post as completed if it belongs to a course
   useEffect(() => {
