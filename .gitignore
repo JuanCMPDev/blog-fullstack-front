@@ -42,4 +42,5 @@ next-env.d.ts
 
 # AI agents
 /.agents/
-/.claude/
+/.claude/settings.local.json
+/.claude/worktrees/
