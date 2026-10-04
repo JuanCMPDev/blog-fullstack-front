@@ -15,37 +15,40 @@ Qué significa "profesional" aquí (criterios de salida del relanzamiento):
 
 ## Acción inmediata (antes de cualquier iteración)
 
-La auditoría confirmó en ejecución que la API de `media` del backend no tiene autenticación: cualquier anónimo puede borrar objetos del bucket y obtener URLs de subida sin límite (ticket **BK-001**, hallazgo BS-01/BQ-01). Es un hotfix de un par de horas y debe desplegarse de inmediato, en su propio PR, sin esperar al resto de la Fase 0. Conviene incluir en el mismo PR **BK-019** (los usuarios con enlace de verificación caducado no pueden volver a pedirlo) y **BK-004** (sitemap vacío).
+La auditoría confirmó en ejecución que la API de `media` del backend no tenía autenticación (ticket **BK-001**, hallazgo BS-01/BQ-01). **Hecho el 2026-10-04** en la rama `relaunch/hotfix-media` del backend junto con **BK-019** (reenvío de verificación) y **BK-004** (endpoint de sitemap), con tests de comportamiento y revisión de seguridad adversarial (Opus). Nada está en producción todavía; al desplegar `main`, este hotfix debe ir incluido.
 
 ## Fase activa
 
 **Fase 0 — Cimientos** (actualizar esta línea al cambiar de fase; el skill `/relaunch-iteration` la lee).
 
-Tickets por fase y repo (ver `BACKLOG.md` de cada repo): Fase 0 → backend BK-001…BK-009, BK-012…BK-014, BK-019 (13) · frontend FR-000…FR-013, FR-015 (14). Fase 1 → backend BK-010, BK-011, BK-015…BK-018, BK-020, BK-021, BK-025…BK-031 (14) · frontend FR-101…FR-108 (8). Fase 2 → backend BK-022, BK-032…BK-037 (7) · frontend FR-201…FR-216 (16). Fase 3 → backend BK-023, BK-024, BK-038, BK-039 (4) · frontend FR-301…FR-311 (10). Fase 4 → backend BK-040…BK-045 (6) · frontend FR-401…FR-407 (7). Fase 5 → BK-047, FR-501.
+Tickets por fase y repo (ver `BACKLOG.md` de cada repo): Fase 0 → backend BK-001…BK-009, BK-012…BK-014, BK-019, BK-048, BK-049 (15; BK-001/004/019 hechos) · frontend FR-000…FR-013, FR-015…FR-017 (16). Fase 1 → backend BK-010, BK-011, BK-015…BK-018, BK-020, BK-021, BK-025, BK-028…BK-031 (12) · frontend FR-101…FR-108 (8). Fase 2 → backend BK-022, BK-032…BK-037 (7) · frontend FR-201…FR-216 (16). Fase 3 → backend BK-023, BK-024, BK-039 (3) · frontend FR-301…FR-307, FR-310, FR-311 (9). Fase 4 → backend BK-040…BK-045 (6) · frontend FR-401…FR-407 (7). Fase 5 → BK-047, FR-501. Cancelados por decisión: BK-026, BK-027, BK-038, FR-308.
 
 ## Fases
 
 | Fase | Objetivo | Entrada | Salida (gate humano) | Tamaño estimado |
 |---|---|---|---|---|
-| **0 · Cimientos** | Que todo se pueda verificar y desplegar con confianza: CI, lint/format baseline, limpieza de artefactos, README/.env reales, rama por defecto, deps en conflicto, endpoints faltantes que ya rompen producción (sitemap). | Esta auditoría | CI verde en ambos repos; `BACKLOG` F0 en done; humano aprueba cambiar rama por defecto a `main` y archivar `master`. | 2-3 iteraciones |
+| **0 · Cimientos** | Que todo se pueda verificar y desplegar con confianza: hotfix de seguridad (hecho), CI, lint/format baseline, limpieza de artefactos, README/.env reales, deps en conflicto, sitemap, y la **reducción de alcance decidida**: retirar cursos/exámenes y reducir la cuenta a "solo comentar" en ambos repos. | Esta auditoría + decisiones del 2026-10-04 | CI verde en ambos repos; `BACKLOG` F0 en done; rama por defecto cambiada a `main` en GitHub. | 3-4 iteraciones |
 | **1 · Seguridad y contrato API** | Cerrar P0/P1 de auth/cookies/throttling/validación/IDOR; alinear 100 % las llamadas del front con las rutas del back; proteger `/admin` en servidor. | Gate F0 | `security-reviewer` aprueba; matriz de contrato sin MISSING/MISMATCH; humano aprueba cambios de cookies/CORS/dominio. | 3-4 iteraciones |
 | **2 · Rendimiento, SEO y renderizado** | Home/post/cursos/proyectos como Server Components con revalidación; metadata por página; JSON-LD Person/WebSite/BlogPosting correctos; RSS; imágenes y fuentes optimizadas; bundle del post < 200 kB First Load JS. | Gate F1 | Lighthouse ≥ 90 en home y post (medido en preview de Vercel); humano revisa visualmente. | 3-4 iteraciones |
-| **3 · Remodelación de producto y marca** | Nueva arquitectura de información (Inicio, Blog, Proyectos, Sobre mí, Contacto), hero personal, página de post rediseñada (tipografía, TOC, código, compartir, autor, relacionados), about/CV/portfolio, newsletter/RSS, decisión sobre LMS (cursos/exámenes) y registro/comentarios. | Gate F2 + **decisiones de alcance del humano** (ver "Decisiones pendientes") | Humano aprueba diseño en preview; copy revisado; sin regresiones de F1/F2. | 4-6 iteraciones |
+| **3 · Remodelación de producto y marca** | Nueva arquitectura de información (Inicio, Blog, Proyectos, Sobre mí, Contacto), hero personal con enlace al canal de YouTube, página de post rediseñada (tipografía, TOC, código, compartir, autor, relacionados), about/CV/portfolio, newsletter/RSS. La retirada del LMS y la cuenta mínima ya se ejecutan en la Fase 0. | Gate F2 + URL del canal de YouTube y textos aprobados | Humano aprueba diseño en preview; copy revisado; sin regresiones de F1/F2. | 3-5 iteraciones |
 | **4 · Calidad y observabilidad** | Tests de valor (Testing Library + MSW en front; e2e con DB en CI en back; Playwright smoke), Sentry/logging estructurado, consolidar analítica, actualizar dependencias mayores (Next, Tailwind 4, Prisma 7, react-day-picker 9), eliminar código muerto y duplicados. | Gate F3 | Cobertura mínima acordada; alertas de errores activas; deps sin CVEs altas. | 3-4 iteraciones |
 | **5 · Lanzamiento** | Checklist final (OG validators, sitemap/robots, redirecciones, 404, dominio/cookies en prod, backups DB), nota de lanzamiento y publicación en redes. | Gate F4 | Humano publica. | 1 iteración |
 
 Las fases 1 y 2 pueden solaparse parcialmente (tickets de F2 que no tocan auth pueden entrar cuando F1 lleve ≥ 70 %), pero el bucle solo trabaja la fase activa salvo indicación humana.
 
-## Decisiones pendientes (el bucle se detiene aquí si llega sin respuesta)
+## Decisiones (actualizado 2026-10-04 tras la respuesta del propietario)
 
-1. **Alcance LMS**: ¿mantener cursos/módulos/exámenes en el relanzamiento, dejarlos ocultos (`en construcción`) o retirarlos del front (manteniendo el back)? Recomendación: ocultarlos del menú y de la home en F3 y decidir con datos de uso; el blog/portfolio es el núcleo.
-2. **Cuentas de usuario, comentarios y likes**: ¿seguir con registro propio (email verificado, reCAPTCHA) o simplificar (comentarios vía Giscus/GitHub o sin comentarios)? Recomendación: mantener el back, pero evaluar en F3 ocultar registro público y usar Giscus; reduce superficie de ataque y mantenimiento.
-3. **Marca**: ¿"Techno Espacio" como medio o marca personal "Juan Carlos Muñoz · Techno Espacio"? Recomendación: marca personal con Techno Espacio como nombre del blog; cambia hero, about, footer, JSON-LD Person y OG.
-4. **Rama por defecto del back**: cambiar a `main` y archivar `master` (acción manual en GitHub). Confirmar en Coolify qué rama se despliega.
-5. **Dominio de cookies**: el back fija `domain: technoespacio.com` para la cookie de refresh y el front llama a la API vía rewrite de Vercel; hay que decidir y probar el flujo (ver AUDIT backend) antes de tocarlo.
-6. **Push automático** de los bucles a `relaunch/*` y apertura de PRs borrador: hoy deshabilitado en `CLAUDE.md`.
-7. **Licencia** de ambos repos (el frontend es público sin LICENSE) y **analítica** (¿mantener GA4 con consentimiento o solo Vercel Analytics?).
-8. **Política de EDITOR** (¿solo sus posts o todos?) y si se mantiene el rol.
+Tomadas:
+1. **LMS**: se retiran cursos, módulos y exámenes del frontend y del backend (tickets FR-016, BK-048). Nada está en producción todavía, así que la migración que elimina las tablas no necesita plan de datos; sigue requiriendo gate humano por ser migración.
+2. **Cuentas**: se mantienen los comentarios con una **cuenta mínima** cuyo único fin es comentar: registro con verificación de email, login, recuperación de contraseña, nick y avatar opcional; likes de comentarios. Se retiran: perfiles públicos (`/profile/*`, `GET profile/:identifier`, actividades), posts guardados, likes de posts, portada/bio/skills/redes del perfil y `Settings` (FR-017, BK-049). El panel de administración conserva la gestión de usuarios (banear, roles).
+3. **Marca**: marca personal (Juan Carlos Muñoz, desarrollador) con **Techno Espacio** como nombre del blog y del canal de YouTube. El canal se enlaza en header/footer/about, en el JSON-LD `Person.sameAs` y en la caja de autor; hace falta la URL del canal (pendiente de que la aporte el propietario).
+4. **Rama por defecto del backend**: autorizado el cambio a `main`. El proxy de GitHub de esta sesión no permite escribir ajustes del repositorio, así que debe hacerse en GitHub → Settings → Branches (default branch → `main`); después borrar `master` y `develop`.
+5. **Push automático**: autorizado a ramas `relaunch/*` (ya reflejado en `CLAUDE.md`). La apertura automática de PRs sigue deshabilitada: los PRs hacia `main` los abre el propietario (o se autoriza más adelante).
+
+Pendientes (el bucle se detiene si llega a un ticket que las necesita):
+6. **Dominio de cookies y transporte**: ¿el navegador llama a `api.technoespacio.com` directamente (CORS ya configurado) o se mantiene el rewrite de Vercel? Afecta a BK-005, BK-016 y FR-106. Recomendación: llamadas directas y cookie host-only `SameSite=Lax`.
+7. **Licencia** de ambos repos (el frontend es público sin LICENSE) y **analítica** (¿GA4 con consentimiento o solo Vercel Analytics?).
+8. **Rol EDITOR**: con un solo autor, ¿se mantiene el rol? Si sí, política "solo sus posts" (BK-030).
 
 ## Cómo se ejecuta
 

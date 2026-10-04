@@ -1,6 +1,6 @@
 # Backlog del relanzamiento — frontend (blog-fullstack-front)
 
-Fuente de verdad para los bucles autónomos (`/relaunch-iteration`). Un ticket por bloque; los agentes leen y actualizan solo los campos `estado` y `notas`. Estados: `todo` · `in_progress` · `done` · `blocked` · `proposed` (propuesto por `audit-sweep`, requiere promoción humana). Prioridad P0-P3; esfuerzo S (≤ ½ día de agente), M (≤ 2 días), L (> 2 días). `blocked_by` acepta ids de este repo (`FR-*`) y del backend (`BK-*`, ver `blog-fullstack-back/docs/relaunch/BACKLOG.md`). `origen` remite a los hallazgos de `AUDIT.md` y `audit/*.md`.
+Fuente de verdad para los bucles autónomos (`/relaunch-iteration`). Un ticket por bloque; los agentes leen y actualizan solo los campos `estado` y `notas`. Estados: `todo` · `in_progress` · `done` · `blocked` · `proposed` (propuesto por `audit-sweep`, requiere promoción humana) · `wontfix` (cancelado por decisión). Prioridad P0-P3; esfuerzo S (≤ ½ día de agente), M (≤ 2 días), L (> 2 días). `blocked_by` acepta ids de este repo (`FR-*`) y del backend (`BK-*`, ver `blog-fullstack-back/docs/relaunch/BACKLOG.md`). `origen` remite a los hallazgos de `AUDIT.md` y `audit/*.md`.
 
 Verificación estándar (todo ticket la ejecuta además de la suya): `npx tsc --noEmit && npm run lint && npm run test:run && npm run build`. En el entorno cloud el build avisa del sitemap/metadataBase por falta de red: no cuenta como fallo salvo que el ticket trate justo eso.
 
@@ -150,7 +150,7 @@ Convenciones de implementación: ver `CLAUDE.md`. Gates humanos: ver `PLAN.md`.
 - blocked_by: FR-007
 - origen: FA-01, FU-07
 - archivos: app/sitemap.ts, lib/api/server.ts (nuevo), lib/sitemap.test.ts (nuevo)
-- descripcion: El sitemap llama a `posts/sitemap` (inexistente en el backend) y traga el error: solo 4 URLs. Implementar un fetcher de servidor que pagine `GET posts?page=n&limit=100` (existe y devuelve solo PUBLISHED) hasta `meta.lastPage`, con URL absoluta desde `lib/env.ts`, `lastModified` desde `updatedAt`, y añadir `/projects`, `/courses` y `/courses/[slug]`. Cuando exista `BK-004` (`GET posts/sitemap`), cambiar a ese endpoint. En caso de error de red, registrar con `logger.error` y, si `process.env.CI` está definido, lanzar.
+- descripcion: El sitemap llamaba a `posts/sitemap`, que no existía, y tragaba el error. El backend ya expone `GET posts/sitemap` (BK-004, hecho): consumirlo desde un fetcher de servidor con URL absoluta desde `lib/env.ts` (`[{slug, publishDate, createdAt, updatedAt}]`), `lastModified` desde `updatedAt`, y añadir `/projects` (y `/blog`, `/tags/*` cuando existan). En caso de error de red, registrar con `logger.error` y, si `process.env.CI` está definido, lanzar.
 - aceptacion:
   - Test unitario con fetch mockeado: `sitemap()` devuelve las URLs de los posts y de proyectos.
   - `npm run build` no muestra `Failed to parse URL`.
@@ -253,6 +253,39 @@ Convenciones de implementación: ver `CLAUDE.md`. Gates humanos: ver `PLAN.md`.
 - verificar: estándar
 - notas: —
 
+### FR-016 · Retirar cursos y exámenes del frontend
+- fase: 0
+- prioridad: P1
+- estado: todo
+- esfuerzo: L
+- tags: scope
+- blocked_by: FR-005
+- origen: Decisión 1 del PLAN (2026-10-04); audit/front-ux-seo.md (e)
+- archivos: app/(home)/courses/**, app/(home)/exercises, app/admin/courses/**, app/admin/exams/**, components/courses/**, components/exams/**, components/common/{FeaturedCourses,ContinueLearning}.tsx, components/blog/{SeriesNavigation,QuizBlockView}.tsx, components/admin/{CourseSelector,ExamEditor,AdminSidebar}.tsx, hooks/{use-courses,use-course-progress,use-exams,use-admin-exams,use-modules}.ts, lib/types.ts, lib/post-content-v2.ts, components/layout/{Header,MobileMenu,Footer}.tsx, app/sitemap.ts, app/robots.ts, components/common/Hero.tsx
+- descripcion: Eliminar rutas, componentes, hooks y tipos de cursos, módulos, exámenes y progreso; quitar sus entradas del menú, footer, sidebar del admin, home (`FeaturedCourses`, `ContinueLearning`), hero (CTA "Explorar Cursos" → "Leer el blog"), sitemap y robots; eliminar el bloque `quiz` del contenido v2 y `SeriesNavigation` del post; limpiar `lib/types.ts` (Module, Exam, courseId/courseOrder en Post). `/courses*` y `/exercises` pasan a `redirects()` permanentes hacia `/`. Verificar con `grep -rniE "course|exam|quiz"` que no queda nada fuera de las redirecciones.
+- aceptacion:
+  - `grep -rniE "course|exam|quiz" app components hooks lib --include=*.ts --include=*.tsx` → 0 resultados (salvo `next.config.mjs` redirects).
+  - Build en verde; el conteo de líneas TS/TSX baja ≥ 3.000.
+- verificar: estándar
+- notas: Coordinar con BK-048; el front puede ir primero (deja de llamar a los endpoints).
+
+### FR-017 · Cuenta mínima: la sesión solo sirve para comentar
+- fase: 0
+- prioridad: P1
+- estado: todo
+- esfuerzo: L
+- tags: scope, auth
+- blocked_by: FR-016
+- origen: Decisión 2 del PLAN (2026-10-04); FA-09, FU-13, FU-28
+- archivos: app/(home)/profile/**, components/profile/**, components/blog/{SaveButton,LikeButton}.tsx, hooks/{use-likes,use-saved-posts,use-profile,use-activities}.ts, lib/profile-adapter.ts, lib/types.ts, components/auth/UserMenu.tsx, components/layout/{Header,MobileMenu}.tsx, app/(home)/{signin,signup}/page.tsx, components/blog/Comments.tsx, app/robots.ts, app/sitemap.ts
+- descripcion: Retirar perfiles públicos (`/profile`, `/profile/[nick]`), posts guardados, likes de posts y actividades; conservar registro con verificación, login, reset de contraseña, nick y avatar opcional, comentarios con likes de comentario y el panel de usuarios del admin. El menú de usuario queda en "Mi cuenta" (nick, avatar, cambiar contraseña) y "Cerrar sesión"; el acceso para comentar se ofrece junto al formulario de comentarios ("Inicia sesión para comentar"), no en el header. Reescribir `signup`/`signin` con copy acorde ("crea una cuenta para comentar").
+- aceptacion:
+  - Rutas `/profile*` eliminadas o redirigidas; `grep -rniE "saved|savePost|useLikes|activities" app components hooks lib` → 0 (salvo likes de comentario).
+  - Flujo manual en `next dev`: registrarse, verificar (mock), iniciar sesión, comentar, dar like a un comentario, editar nick/avatar.
+  - Build en verde.
+- verificar: estándar
+- notas: Coordinar con BK-049 (el back retira los endpoints después).
+
 ---
 
 ## Fase 1 — Seguridad y contrato API
@@ -329,8 +362,8 @@ Convenciones de implementación: ver `CLAUDE.md`. Gates humanos: ver `PLAN.md`.
 - tags: auth, perf
 - blocked_by: FR-101
 - origen: FA-07
-- archivos: components/layout/AuthProvider.tsx, lib/auth.ts, lib/customFetch.ts, app/(home)/post/[slug]/PostPageClient.tsx, hooks/use-course-progress.ts, hooks/use-saved-posts.ts
-- descripcion: Eliminar los `setInterval` (refresh cada 10 min y estado cada 5 min por pestaña). Refrescar solo ante 401 o cabecera `x-access-token`, serializando con `navigator.locks` y compartiendo token/logout por `BroadcastChannel`. Comprobar `user-status` en `visibilitychange`/focus con throttle de 5 min. Estrechar dependencias de efectos a `user?.userId` para que un refresh no vuelva a cargar posts ni reenvíe `markPostCompleted`.
+- archivos: components/layout/AuthProvider.tsx, lib/auth.ts, lib/customFetch.ts, app/(home)/post/[slug]/PostPageClient.tsx
+- descripcion: Eliminar los `setInterval` (refresh cada 10 min y estado cada 5 min por pestaña). Refrescar solo ante 401 o cabecera `x-access-token`, serializando con `navigator.locks` y compartiendo token/logout por `BroadcastChannel`. Comprobar `user-status` en `visibilitychange`/focus con throttle de 5 min. Estrechar dependencias de efectos a `user?.userId` para que un refresh no vuelva a cargar el post ni los comentarios.
 - aceptacion:
   - Con dos pestañas abiertas (Playwright) ninguna cierra sesión tras 15 min simulados; un refresh no provoca refetch del post.
   - `grep -n setInterval components/layout/AuthProvider.tsx` → 0.
@@ -360,8 +393,8 @@ Convenciones de implementación: ver `CLAUDE.md`. Gates humanos: ver `PLAN.md`.
 - tags: contract, ux
 - blocked_by: BK-011
 - origen: FA-09
-- archivos: hooks/use-likes.ts, hooks/use-saved-posts.ts, hooks/use-profile.ts, components/blog/SaveButton.tsx
-- descripcion: `hasLiked` arranca en `false` y nunca consulta `likes/post/:id/check`; los guardados leen solo la página 1 y el perfil filtra los primeros 50 posts públicos. Inicializar desde los endpoints `check` (o del campo `hasLiked`/`isSaved` que BK-011 añada al detalle), renderizar guardados desde `GET saved-posts` paginado y dejar de montar una lista completa por cada `SaveButton`.
+- archivos: hooks/useComments.ts, components/blog/comments/*
+- descripcion: Tras FR-017 solo quedan likes de comentario: `hasLiked` llega siempre `false` porque la ruta anidada no recibe `userId` (BK-011 lo corrige). Inicializar el estado desde la respuesta del backend y eliminar `use-likes.ts`/`use-saved-posts.ts` si FR-017 no lo hizo.
 - aceptacion:
   - Tests MSW: al cargar un post con like previo el botón aparece activo; perfil muestra guardados de la API, no filtrados.
 - verificar: estándar
@@ -425,10 +458,10 @@ Convenciones de implementación: ver `CLAUDE.md`. Gates humanos: ver `PLAN.md`.
 - estado: todo
 - esfuerzo: M
 - tags: seo, perf, render
-- blocked_by: FR-015, FR-007
+- blocked_by: FR-015, FR-007, FR-016
 - origen: FU-09, FA-02, FA-22, FU-27
 - archivos: app/(home)/page.tsx, components/blog/BlogList.tsx, components/common/TagFilters.tsx, components/layout/Sidebar.tsx, lib/api/server.ts
-- descripcion: La home es `"use client"` y hace 5-8 llamadas tras hidratar. Convertirla en Server Component con `revalidate: 300`, paginación y filtro por tag mediante `searchParams` (URLs rastreables `/?page=2&tag=x`), primeros 6 posts en el HTML, tags populares y recomendados obtenidos en servidor y pasados como props. Mantener islas cliente solo para interacción. Esqueletos con el mismo número de tarjetas que la página.
+- descripcion: La home es `"use client"` y hace 5-8 llamadas tras hidratar. Convertirla en Server Component con `revalidate: 300`, paginación y filtro por tag mediante `searchParams` (URLs rastreables `/?page=2&tag=x`), primeros 6 posts en el HTML, tags populares y recomendados obtenidos en servidor y pasados como props. Mantener islas cliente solo para interacción. Esqueletos con el mismo número de tarjetas que la página. Los bloques de cursos (`FeaturedCourses`, `ContinueLearning`) ya no existen tras FR-016.
 - aceptacion:
   - `curl -s http://localhost:3000/` contiene los títulos y enlaces de los posts.
   - Cero llamadas a la API desde el cliente al cargar la home sin sesión.
@@ -443,8 +476,8 @@ Convenciones de implementación: ver `CLAUDE.md`. Gates humanos: ver `PLAN.md`.
 - tags: seo, render
 - blocked_by: FR-203
 - origen: FA-02, FA-11
-- archivos: app/(home)/projects/page.tsx, app/(home)/courses/page.tsx, app/(home)/courses/[slug]/page.tsx
-- descripcion: Mismo patrón que FR-203 para `/projects` (portfolio: contenido clave para la marca), `/courses` y `/courses/[slug]`, con `generateMetadata` propio y `notFound()`. Si el gate humano decide ocultar cursos (PLAN → decisiones), limitar este ticket a proyectos y anotar.
+- archivos: app/(home)/projects/page.tsx
+- descripcion: Mismo patrón que FR-203 para `/projects` (portfolio: contenido clave para la marca), con `generateMetadata` propio. Las rutas de cursos desaparecen en FR-016.
 - aceptacion:
   - El HTML de `/projects` contiene nombre y stack de los proyectos; `/courses/<slug>` inexistente → 404.
 - verificar: estándar
@@ -474,7 +507,7 @@ Convenciones de implementación: ver `CLAUDE.md`. Gates humanos: ver `PLAN.md`.
 - blocked_by: FR-007, FR-011
 - origen: FU-06
 - archivos: app/layout.tsx, components/blog/StructuredData.tsx, lib/site.ts
-- descripcion: Añadir en el layout raíz JSON-LD `WebSite` y `Person` (nombre, jobTitle, url, image, `sameAs` LinkedIn/GitHub/X). En el post: `BlogPosting` con `author` → `/about`, `publisher` tipo Person, breadcrumb Inicio › Blog › título apuntando a rutas reales (`/blog` existe tras FR-303; hasta entonces `/`).
+- descripcion: Añadir en el layout raíz JSON-LD `WebSite` y `Person` (nombre, jobTitle, url, image, `sameAs`: YouTube, LinkedIn, GitHub, X). En el post: `BlogPosting` con `author` → `/about`, `publisher` tipo Person, breadcrumb Inicio › Blog › título apuntando a rutas reales (`/blog` existe tras FR-303; hasta entonces `/`).
 - aceptacion:
   - Validación con el validador de schema.org (o test de estructura) sin errores; sin URLs a rutas inexistentes.
 - verificar: estándar
@@ -626,7 +659,7 @@ Convenciones de implementación: ver `CLAUDE.md`. Gates humanos: ver `PLAN.md`.
 - blocked_by: —
 - origen: FU-12, FU-17, FU-18, FU-24, FU-28, FU-33
 - archivos: components/layout/{Header,MobileMenu,Footer}.tsx, components/auth/UserMenu.tsx, components/blog/SaveButton.tsx, app/(home)/{signin,signup}/page.tsx, app/(home)/layout.tsx, components/ui/{card,pagination,sheet,dialog}.tsx, app/globals.css
-- descripcion: Botón del menú móvil, toggles de contraseña, menú de usuario y Guardar sin nombre accesible; `<main>` anidado en 5 rutas; sin skip link; 25 usos de `text-muted-foreground/30..70` con contraste 1.5-2.7:1; `UserMenu` sin teclado (sustituir por `DropdownMenu` de shadcn); `CardTitle` como div; cadenas en inglés en sr-only. Corregir todo con `aria-label` en español, `role="search"`, `aria-current`, un solo `main`, tokens sin opacidad, `as` prop en `CardTitle`, h1 del cuerpo degradado a h2.
+- descripcion: Botón del menú móvil, toggles de contraseña, menú de usuario y Guardar sin nombre accesible; `<main>` anidado en 5 rutas; sin skip link; 25 usos de `text-muted-foreground/30..70` con contraste 1.5-2.7:1; `UserMenu` sin teclado (sustituir por `DropdownMenu` de shadcn o eliminar tras FR-017); `CardTitle` como div; cadenas en inglés en sr-only. Corregir todo con `aria-label` en español, `role="search"`, `aria-current`, un solo `main`, tokens sin opacidad, `as` prop en `CardTitle`, h1 del cuerpo degradado a h2.
 - aceptacion:
   - `axe` (vía `@axe-core/playwright` o extensión) sin violaciones críticas/serias en `/`, `/post/<slug>`, `/contact`.
   - Navegación completa con teclado en header, menú móvil y menú de usuario.
@@ -646,7 +679,7 @@ Convenciones de implementación: ver `CLAUDE.md`. Gates humanos: ver `PLAN.md`.
 - blocked_by: FR-303
 - origen: FU-10, FU-03
 - archivos: components/layout/Header.tsx, components/layout/MobileMenu.tsx, components/layout/Footer.tsx
-- descripcion: Menú actual Inicio/Cursos/Proyectos/Contacto con registro en el header. Nuevo: Blog, Proyectos, Sobre mí, Contacto + icono de búsqueda, tema y botón "Descargar CV"; sin Iniciar sesión/Registrarse en el header público (acceso admin por `/signin`). Footer: columnas Navegación, Sígueme (redes + RSS + email), Legal; sin el widget falso de estado. Cursos visible solo si la decisión 1 del PLAN lo mantiene.
+- descripcion: Menú actual Inicio/Cursos/Proyectos/Contacto con registro en el header. Nuevo: Blog, Proyectos, Sobre mí, Contacto + icono de búsqueda, tema, botón "Descargar CV" y enlace al canal de YouTube "Techno Espacio"; sin Iniciar sesión/Registrarse en el header público (el acceso para comentar se ofrece junto al formulario de comentarios; el admin entra por `/signin`). Footer: columnas Navegación, Sígueme (YouTube, LinkedIn, GitHub, X, RSS, email), Legal; sin el widget falso de estado.
 - aceptacion:
   - `/about` enlazada desde header y footer; header renderizado en servidor (sin estado `mounted` vacío).
 - verificar: estándar
@@ -661,12 +694,12 @@ Convenciones de implementación: ver `CLAUDE.md`. Gates humanos: ver `PLAN.md`.
 - blocked_by: FR-211
 - origen: FU-03, FU-16, FU-26
 - archivos: components/common/Hero.tsx, app/layout.tsx (description), components/layout/Footer.tsx, app/(home)/faq/page.tsx, app/(home)/terminos/page.tsx, app/(home)/projects/page.tsx, app/not-found.tsx
-- descripcion: Hero estático con foto profesional, "Juan Carlos Muñoz · Desarrollador full-stack", una frase de valor (qué construyes y sobre qué escribes), CTAs "Leer el blog" / "Ver proyectos" y redes. Sin typewriter ni iconos flotantes. Reescribir metadata, footer, FAQ (o eliminarla), términos y proyectos en primera persona; eliminar "noticias", "equipo editorial", "plataforma educativa", "observatorio digital" y afirmaciones no sostenibles ("2-3 artículos cada semana").
+- descripcion: Hero estático con foto profesional, "Juan Carlos Muñoz · Desarrollador full-stack", una frase de valor (qué construyes y sobre qué escribes), CTAs "Leer el blog" / "Ver proyectos" y un tercer acceso al canal de YouTube Techno Espacio; redes. Sin typewriter ni iconos flotantes. Reescribir metadata, footer, FAQ (o eliminarla), términos y proyectos en primera persona; eliminar "noticias", "equipo editorial", "plataforma educativa", "observatorio digital" y afirmaciones no sostenibles. Techno Espacio es el nombre del blog y del canal, no un medio: usar "el blog" / "mi canal".
 - aceptacion:
   - `grep -rniE "equipo editorial|observatorio|plataforma educativa|noticias" app components` → 0.
   - El h1 de la home es estable (sin texto cambiante) y contiene el nombre.
 - verificar: estándar
-- notas: Gate humano: aprobar textos y foto.
+- notas: Gate humano: aprobar textos y foto. Falta la URL del canal de YouTube (pedir al propietario; hasta entonces `lib/site.ts` la deja como `null` y los componentes la ocultan).
 
 ### FR-303 · Índice `/blog` y archivos por tag `/tags/[tag]` en servidor
 - fase: 3
@@ -722,7 +755,7 @@ Convenciones de implementación: ver `CLAUDE.md`. Gates humanos: ver `PLAN.md`.
 - blocked_by: FR-302
 - origen: FU-26, FU-34, FU-35, FU-36, FU-32
 - archivos: components/layout/Footer.tsx, app/(home)/faq/page.tsx, app/(home)/politica-privacidad/page.tsx, app/(home)/terminos/page.tsx, app/(home)/contact/page.tsx, components/common/SocialLinks.tsx, lib/site.ts
-- descripcion: Unificar primera persona, una sola definición de redes (`lib/site.ts` + un componente `SocialLinks` con icono de X correcto), fechas reales en política/términos, `role="status"` en el éxito del formulario, email ofuscado o vía formulario, `text-glow` solo en oscuro o eliminado, `locale` `es_CO`. FAQ: fusionar en About/Contacto o reescribir sin promesas.
+- descripcion: Unificar primera persona, una sola definición de redes (`lib/site.ts` + un componente `SocialLinks` con YouTube e icono de X correcto), fechas reales en política/términos, `role="status"` en el éxito del formulario, email ofuscado o vía formulario, `text-glow` solo en oscuro o eliminado, `locale` `es_CO`. FAQ: fusionar en About/Contacto o reescribir sin promesas.
 - aceptacion:
   - `grep -rn "twitter.com" app components` → 0; una sola definición de redes.
 - verificar: estándar
@@ -746,7 +779,7 @@ Convenciones de implementación: ver `CLAUDE.md`. Gates humanos: ver `PLAN.md`.
 ### FR-308 · Ocultar o retirar LMS y registro público (según decisión)
 - fase: 3
 - prioridad: P1
-- estado: blocked
+- estado: wontfix
 - esfuerzo: L
 - tags: brand, scope
 - blocked_by: —
@@ -756,7 +789,7 @@ Convenciones de implementación: ver `CLAUDE.md`. Gates humanos: ver `PLAN.md`.
 - aceptacion:
   - Lo oculto no aparece en HTML público ni sitemap; lo retirado no deja imports rotos; build en verde.
 - verificar: estándar
-- notas: Estado `blocked` hasta que el humano responda a las decisiones 1 y 2 del PLAN.
+- notas: Cancelado el 2026-10-04: decisión tomada; sustituido por FR-016 (retirar cursos/exámenes) y FR-017 (cuenta mínima), ambos en Fase 0.
 
 ### FR-310 · Consolidar componentes duplicados del admin y utilidades de página
 - fase: 3
@@ -907,7 +940,7 @@ Convenciones de implementación: ver `CLAUDE.md`. Gates humanos: ver `PLAN.md`.
 - estado: todo
 - esfuerzo: M
 - tags: launch
-- blocked_by: FR-201, FR-203, FR-205, FR-206, FR-207, FR-208, FR-216, FR-302, FR-305
+- blocked_by: FR-016, FR-017, FR-201, FR-203, FR-205, FR-206, FR-207, FR-208, FR-216, FR-302, FR-305
 - origen: PLAN
 - archivos: docs/relaunch/LAUNCH_CHECKLIST.md (nuevo)
 - descripcion: Lighthouse móvil ≥ 90 en `/` y `/post/<slug>` (preview de Vercel), validadores OG de LinkedIn/X/WhatsApp, Rich Results de Google sin errores, `sitemap.xml` y `feed.xml` válidos, redirecciones (`/exercises`, `www` ↔ apex), 404 correcto, cookies/dominio probados en producción (BK-016), copia de seguridad de la base de datos, nota de lanzamiento para redes.

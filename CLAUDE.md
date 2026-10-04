@@ -19,7 +19,7 @@ Definición de "verde" antes de cualquier commit: typecheck + lint + tests + bui
 - Variables de entorno (ver `.env.example` cuando exista): `NEXT_PUBLIC_API_URL`, `NEXT_PUBLIC_SITE_URL`, `NEXT_PUBLIC_RECAPTCHA_SITE_KEY`, `NEXT_PUBLIC_MEDIA_URL`, `NEXT_PUBLIC_APP_LOG_LEVEL`, `NEXT_PUBLIC_ENABLE_LEGACY_BASE64_FALLBACK`. Nunca las hardcodees.
 
 ## Estructura
-- `app/(home)/*` páginas públicas · `app/admin/*` panel (protegido solo en cliente por `ProtectedRoute`) · `app/layout.tsx` metadata global.
+- `app/(home)/*` páginas públicas · `app/admin/*` panel (protegido solo en cliente por `ProtectedRoute`) · `app/layout.tsx` metadata global. Decisión 2026-10-04: cursos/exámenes, perfiles públicos, guardados, likes de posts y actividad se retiran (tickets FR-016 y FR-017); la cuenta de usuario existe solo para comentar.
 - `components/{blog,common,layout,auth,admin,profile,ui}` · `hooks/*` · `lib/*` (api, customFetch, auth store, tipos, contenido v1/v2) · `utils/*`.
 - `docs/relaunch/*` auditoría, plan, backlog y reportes del relanzamiento.
 
@@ -33,7 +33,7 @@ Definición de "verde" antes de cualquier commit: typecheck + lint + tests + bui
 
 ## Ramas y despliegue
 - `main` = producción (Vercel). Nunca push directo a `main`/`develop`; trabajo en `relaunch/<fase>` o `relaunch/<ticket>`; integración por PR hacia `main`.
-- Push automático desde los bucles autónomos: **deshabilitado** (`push: false`). Para habilitarlo a ramas `relaunch/*`, cambia esta línea a `habilitado` y pasa `push: true` en el skill.
+- Push automático desde los bucles autónomos: **habilitado** únicamente a ramas `relaunch/*` (`push: true` en el skill), autorizado por el propietario el 2026-10-04. Nunca a `main`/`develop`/`master`.
 - Apertura automática de PRs borrador desde los bucles: **deshabilitada**.
 
 ## Relanzamiento autónomo
